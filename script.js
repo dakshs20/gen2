@@ -1,1361 +1,761 @@
-// This console log will appear if the script file is even loaded and parsed.
-console.log(Date.now(), "script.js: File started parsing.");
-
-// Import Firebase functions directly as a module
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    GoogleAuthProvider, 
+    signInWithPopup,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-console.log(Date.now(), "script.js: Firebase imports attempted.");
-
-// --- Firebase Configuration (Declared at top level) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y", // REPLACE WITH YOUR ACTUAL API KEY
+    apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
     authDomain: "genart-a693a.firebaseapp.com",
     projectId: "genart-a693a",
-    storageBucket: "genart-a693a.firebasestorage.app",
+    storageBucket: "genart-a693a.appspot.com",
+    messagingSenderId: "96958671615",
     appId: "1:96958671615:web:6a0d3aa6bf42c6bda17aca",
     measurementId: "G-EDCW8VYXY6"
 };
-console.log(Date.now(), "script.js: Firebase config defined at top level.");
 
-// --- Firebase App and Service Variables (Declared at top level, initialized later) ---
-let firebaseApp;
-let auth;
-let db;
-let googleProvider;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
-// --- State variables (Declared at top level and initialized) ---
-let currentUser = null; // Stores Firebase User object
-let freeGenerationsLeft = localStorage.getItem('freeGenerationsLeft') ? parseInt(localStorage.getItem('freeGenerationsLeft')) : 3;
-let prompt = ''; // For image generator
-let negativePrompt = ''; // For negative prompt
-let imageUrl = ''; // For generated image
-let loading = false; // For image generation
-let currentError = ''; // Error message for display
-let currentPage = 'home'; // 'home', 'generator'
-let isSigningIn = false; // New state for sign-in loading
-let isAuthReady = false; // Flag to indicate if Firebase Auth state has been checked and services initialized
+// --- DOM Elements ---
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const messageForm = document.getElementById('message-form');
+const chatContainer = document.getElementById('chat-container');
+const newChatBtn = document.getElementById('new-chat-btn');
+const fileUpload = document.getElementById('file-upload');
+const uploadedFilesContainer = document.getElementById('uploaded-files-container');
+const statusIndicator = document.getElementById('status-indicator');
+const revealBtn = document.getElementById('reveal-btn');
+const revealContainer = document.getElementById('reveal-container');
 
-let aspectRatio = '1:1'; // Default aspect ratio
-
-let enhancedPrompt = '';
-let loadingEnhancePrompt = false;
-let variationIdeas = [];
-let loadingVariationIdeas = false;
-
-
-// IMPORTANT: Your Google Cloud API Key for Imagen/Gemini (Declared at top level)
-// REPLACE "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE" WITH THE KEY YOU OBTAINED FROM GOOGLE CLOUD CONSOLE
-const IMAGEN_GEMINI_API_KEY = "AIzaSyBZxXWl9s2AeSCzMrfoEfnYWpGyfvP7jqs";
-console.log(Date.now(), "script.js: IMAGEN_GEMINI_API_KEY value set at top level.");
+// Auth elements
+const authContainer = document.getElementById('auth-container');
+const authModal = document.getElementById('auth-modal');
+const googleSigninBtn = document.getElementById('google-signin-btn');
+const emailSigninForm = document.getElementById('email-signin-form');
+const emailInput = document.getElementById('email-input');
+const passwordInput = document.getElementById('password-input');
+const emailSigninBtn = document.getElementById('email-signin-btn');
+const emailSignupBtn = document.getElementById('email-signup-btn');
+const authError = document.getElementById('auth-error');
 
 
-// --- UI Element References (Will be populated in initApp) ---
-let homePageElement;
-let generatorPageElement;
-let allPageElements = []; // Group for easy iteration
+// Actions Dropdown & Items
+const actionsToggleBtn = document.getElementById('actions-toggle-btn');
+const actionsDropdown = document.getElementById('actions-dropdown');
+const brainstormBtn = document.getElementById('brainstorm-btn');
+const codeGeneratorBtn = document.getElementById('code-generator-btn');
+const webSearchToggle = document.getElementById('web-search-toggle');
+const webSearchStatus = document.getElementById('web-search-status');
 
-let persistentDebugMessage;
-let closeDebugMessageBtn;
+// Modals
+const brainstormModal = document.getElementById('brainstorm-modal');
+const brainstormForm = document.getElementById('brainstorm-form');
+const brainstormInput = document.getElementById('brainstorm-input');
+const codeGeneratorModal = document.getElementById('code-generator-modal');
+const codeGeneratorForm = document.getElementById('code-generator-form');
+const codeDescriptionInput = document.getElementById('code-description-input');
 
-let promptInput;
-let negativePromptInput; // New
-let copyPromptBtn;
-let clearPromptBtn;
-let aspectRatioSelectionDiv;
-let generateBtn;
-let enhanceBtn;
-let variationBtn;
-let useEnhancedPromptBtn;
-let downloadBtn;
-let errorDisplay;
-let imageDisplayContainer;
-let generatedImageElement;
-let generatedImageWrapper; // New reference for the image's parent div
-
-let enhancedPromptDisplay;
-let enhancedPromptText;
-let variationIdeasDisplay;
-let variationIdeasList;
-
-let userDisplayDesktop;
-let signInBtnDesktop;
-let signOutBtnDesktop;
-let userDisplayMobile;
-let signInBtnMobile;
-let signOutBtnMobile;
-let freeGenerationsDisplay;
-let signinRequiredModal;
-let modalSignInBtn;
-let closeSigninModalBtn;
-let startCreatingBtn;
-let logoBtn;
-
-let hamburgerBtn;
-let hamburgerIcon;
-let mobileMenu;
-let mobileMenuOverlay;
-let closeMobileMenuBtn;
-let mobileNavLinks;
-
-let toastContainer;
+// --- State ---
+let isWebSearchEnabled = false;
+let uploadedFiles = [];
+let isGenerating = false;
+let animationTimeout;
+let currentAnimationTarget = null;
+let currentAudio = null;
+let currentSpeakBtn = null;
+let currentUser = null;
+let pendingPrompt = null;
 
 
-// --- Helper function to get elements and log if not found (Declared at top level) ---
-const getElement = (id) => {
-    const element = document.getElementById(id);
-    if (!element) {
-        console.error(Date.now(), `getElement: Element with ID '${id}' NOT FOUND in the DOM.`);
+// --- Authentication ---
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    updateUIForAuthState(user);
+});
+
+function updateUIForAuthState(user) {
+    authContainer.innerHTML = ''; // Clear previous state
+    if (user) {
+        const userDisplay = document.createElement('div');
+        userDisplay.className = 'flex items-center gap-2';
+        userDisplay.innerHTML = `
+            <span class="text-sm font-medium text-text-primary">${user.displayName || user.email}</span>
+            <button id="logout-btn" class="text-xs bg-bg-tertiary hover:bg-slate-200 text-text-secondary font-semibold py-1 px-3 rounded-full">Log Out</button>
+        `;
+        authContainer.appendChild(userDisplay);
+        authContainer.querySelector('#logout-btn').addEventListener('click', () => signOut(auth));
+        
+        messageInput.disabled = false;
+        actionsToggleBtn.disabled = false;
+        messageInput.placeholder = "Ask Verse anything...";
+        sendBtn.disabled = messageInput.value.trim() === '';
+        
+        authModal.classList.add('hidden');
+
+        if (pendingPrompt) {
+            messageInput.value = pendingPrompt;
+            sendBtn.disabled = false;
+            messageForm.dispatchEvent(new Event('submit'));
+            pendingPrompt = null;
+        }
+
     } else {
-        console.log(Date.now(), `getElement: Element with ID '${id}' FOUND.`);
+        const signinBtn = document.createElement('button');
+        signinBtn.id = 'signin-btn';
+        signinBtn.className = 'text-sm bg-accent-primary hover:bg-accent-hover text-white font-semibold py-2 px-4 rounded-lg';
+        signinBtn.textContent = 'Sign In';
+        authContainer.appendChild(signinBtn);
+        signinBtn.addEventListener('click', () => {
+            authModal.classList.remove('hidden');
+        });
+
+        messageInput.disabled = false;
+        actionsToggleBtn.disabled = false;
+        messageInput.placeholder = "Type a message to sign in...";
+        sendBtn.disabled = messageInput.value.trim() === '';
     }
-    return element;
+}
+
+googleSigninBtn.addEventListener('click', () => {
+    signInWithPopup(auth, googleProvider).catch(error => {
+        authError.textContent = error.message;
+        authError.classList.remove('hidden');
+    });
+});
+
+emailSigninForm.addEventListener('submit', (e) => e.preventDefault());
+
+emailSigninBtn.addEventListener('click', () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    signInWithEmailAndPassword(auth, email, password).catch(error => {
+         authError.textContent = error.message;
+         authError.classList.remove('hidden');
+    });
+});
+
+ emailSignupBtn.addEventListener('click', () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    createUserWithEmailAndPassword(auth, email, password).catch(error => {
+         authError.textContent = error.message;
+         authError.classList.remove('hidden');
+    });
+});
+
+
+// --- Event Listeners ---
+
+actionsToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    actionsDropdown.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+    if (!actionsDropdown.contains(e.target) && e.target !== actionsToggleBtn) {
+        actionsDropdown.classList.add('hidden');
+    }
+});
+
+webSearchToggle.addEventListener('click', () => {
+    isWebSearchEnabled = !isWebSearchEnabled;
+    actionsToggleBtn.classList.toggle('text-accent-primary', isWebSearchEnabled);
+    actionsToggleBtn.classList.toggle('glow', isWebSearchEnabled);
+    webSearchStatus.textContent = isWebSearchEnabled ? 'On' : 'Off';
+    webSearchStatus.classList.toggle('text-green-600', isWebSearchEnabled);
+    webSearchStatus.classList.toggle('bg-green-100', isWebSearchEnabled);
+    webSearchStatus.classList.toggle('text-gray-400', !isWebSearchEnabled);
+    webSearchStatus.classList.toggle('bg-gray-200', !isWebSearchEnabled);
+});
+
+messageInput.addEventListener('input', () => {
+    sendBtn.disabled = messageInput.value.trim() === '';
+    messageInput.style.height = 'auto';
+    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+});
+
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        messageForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+});
+
+newChatBtn.addEventListener('click', () => {
+    chatContainer.innerHTML = `
+        <div class="flex items-start gap-4 max-w-2xl">
+             <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex-shrink-0 flex items-center justify-center font-bold text-white shadow-sm">V</div>
+            <div class="bg-bg-tertiary p-4 rounded-xl rounded-tl-none">
+                <strong class="font-semibold text-text-primary">Verse</strong>
+                <p class="text-text-primary leading-relaxed">Hello! It's great to connect. I'm Verse, and I'm here to help. What's on your mind? You can ask a question, we can look at a file, or we can build a website together.</p>
+            </div>
+        </div>`;
+    uploadedFiles = [];
+    uploadedFilesContainer.innerHTML = '';
+    messageInput.value = '';
+    sendBtn.disabled = true;
+});
+
+messageForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = messageInput.value.trim();
+    
+    if (!currentUser) {
+        pendingPrompt = prompt;
+        authModal.classList.remove('hidden');
+        return;
+    }
+
+    if (!prompt || isGenerating) return;
+    
+    const useWebSearch = isWebSearchEnabled;
+
+    addUserMessage(prompt);
+    addThinkingIndicator();
+
+    messageInput.value = '';
+    sendBtn.disabled = true;
+    messageInput.style.height = 'auto';
+
+    if (isWebSearchEnabled) {
+        isWebSearchEnabled = false;
+        actionsToggleBtn.classList.remove('text-accent-primary', 'glow');
+        webSearchStatus.textContent = 'Off';
+        webSearchStatus.classList.remove('text-green-600', 'bg-green-100');
+        webSearchStatus.classList.add('text-gray-400', 'bg-gray-200');
+    }
+
+    setGeneratingState(true);
+
+    if (useWebSearch) addWebSearchIndicator();
+
+    try {
+        const response = await callGeminiAPI(prompt, { useWebSearch });
+        removeThinkingIndicator();
+        if (useWebSearch) removeWebSearchIndicator();
+        addAiResponse(response);
+    } catch (error) {
+        console.error("API Call failed:", error);
+        removeThinkingIndicator();
+        if (useWebSearch) removeWebSearchIndicator();
+        addAiResponse(`<p class="text-red-500">Sorry, I ran into a little trouble there. Could you try that again? If the problem continues, checking the console might give us a clue.</p>`);
+    } finally {
+        setGeneratingState(false);
+    }
+});
+
+fileUpload.addEventListener('change', (e) => {
+    for (const file of e.target.files) {
+        if (uploadedFiles.some(f => f.name === file.name)) continue;
+        uploadedFiles.push({ name: file.name, type: file.type });
+        const fileTag = document.createElement('div');
+        fileTag.className = 'bg-bg-tertiary px-2 py-1 rounded-full flex items-center gap-2 text-xs border border-border-color';
+        fileTag.innerHTML = `<span>${file.name}</span><button class="text-text-secondary hover:text-text-primary" data-filename="${file.name}">&times;</button>`;
+        uploadedFilesContainer.appendChild(fileTag);
+        fileTag.querySelector('button').addEventListener('click', (ev) => {
+            const filename = ev.currentTarget.dataset.filename;
+            uploadedFiles = uploadedFiles.filter(f => f.name !== filename);
+            fileTag.remove();
+        });
+    }
+     showFeedback(`Got it. I'll keep ${e.target.files.length} file(s) in mind.`);
+     actionsDropdown.classList.add('hidden');
+});
+
+// Modal Logic
+const setupModal = (button, modal) => {
+    button.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        actionsDropdown.classList.add('hidden');
+    });
+    const cancelBtn = modal.querySelector('button[type="button"]');
+    cancelBtn.addEventListener('click', () => modal.style.display = 'none');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
 };
 
-// --- Firebase Initialization Function (Called by initApp) ---
-function initFirebase() {
-    console.log(Date.now(), "initFirebase: Initializing Firebase services...");
-    try {
-        firebaseApp = initializeApp(firebaseConfig);
-        auth = getAuth(firebaseApp);
-        db = getFirestore(firebaseApp);
-        googleProvider = new GoogleAuthProvider();
-        console.log(Date.now(), "initFirebase: Firebase services initialized successfully.");
-        isAuthReady = true; // Set to true immediately after Firebase services are initialized
-        console.log(Date.now(), "initFirebase: isAuthReady set to true.");
-
-        // Firebase Auth State Listener - Moved here to ensure 'auth' is defined
-        onAuthStateChanged(auth, async (user) => {
-            console.log(Date.now(), "onAuthStateChanged: Auth state change detected. User:", user ? user.uid : "null");
-            currentUser = user;
-            if (user) {
-                console.log(Date.now(), "onAuthStateChanged: User logged in. Attempting to fetch user data from Firestore.");
-                console.time("fetchUserData"); // Start timer for data fetch
-                try {
-                    await fetchUserData(user.uid); // Fetch user data from Firestore
-                    console.log(Date.now(), "onAuthStateChanged: User data fetch completed successfully.");
-                } catch (dataFetchError) {
-                    console.error(Date.now(), "onAuthStateChanged: Error fetching user data:", dataFetchError);
-                    setError(`Failed to load user data: ${dataFetchError.message}. Some features may be limited.`);
-                    showToast(`Failed to load user data: ${dataFetchError.message}`, "error", 5000);
-                } finally {
-                    console.timeEnd("fetchUserData"); // End timer for data fetch
-                }
-            } else {
-                console.log(Date.now(), "onAuthStateChanged: User logged out or no user detected. Checking local storage for free generations.");
-                currentUser = null;
-                if (localStorage.getItem('freeGenerationsLeft') === null || parseInt(localStorage.getItem('freeGenerationsLeft')) < 0) {
-                    freeGenerationsLeft = 3;
-                    localStorage.setItem('freeGenerationsLeft', freeGenerationsLeft);
-                    console.log(Date.now(), "onAuthStateChanged: Reset freeGenerationsLeft to 3 for unauthenticated user (local storage).");
-                } else {
-                    freeGenerationsLeft = parseInt(localStorage.getItem('freeGenerationsLeft'));
-                    console.log(Date.now(), "onAuthStateChanged: Loaded freeGenerationsLeft from local storage:", freeGenerationsLeft);
-                }
-            }
-            isAuthReady = true; // Confirm auth state is fully processed
-            console.log(Date.now(), "onAuthStateChanged: isAuthReady confirmed true. Updating UI.");
-            updateUI(); // Update UI immediately after auth state is determined
-            console.log(Date.now(), "onAuthStateChanged: Auth state processing complete.");
-        });
-
-    } catch (e) {
-        console.error(Date.now(), "initFirebase: CRITICAL ERROR: Error initializing Firebase:", e);
-        currentError = `Firebase initialization failed: ${e.message}. App may not function correctly.`;
-        // Attempt to show persistent debug message within initApp's scope
-        if (persistentDebugMessage) {
-            persistentDebugMessage.classList.remove('hidden');
-            const msgP = persistentDebugMessage.querySelector('p');
-            if (msgP) msgP.textContent = currentError + " Please check console (F12) for details.";
-        }
-        throw e; // Re-throw to propagate to initApp's catch block
-    }
-}
-
-// --- Toast Notification System (Declared at top level) ---
-function showToast(message, type = 'info', duration = 3000) {
-    if (!toastContainer) {
-        console.warn(Date.now(), "showToast: Toast container not found. Cannot display toast.");
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    
-    let iconClass = '';
-    if (type === 'success') iconClass = 'fas fa-check-circle text-green-400';
-    else if (type === 'error') iconClass = 'fas fa-times-circle text-red-500';
-    else iconClass = 'fas fa-info-circle text-blue-400';
-
-    const icon = document.createElement('i');
-    icon.className = iconClass;
-    toast.prepend(icon);
-
-    toastContainer.appendChild(toast);
-    console.log(Date.now(), `showToast: Displaying ${type} toast: "${message}"`);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(20px)';
-        toast.addEventListener('transitionend', () => {
-            toast.remove();
-            console.log(Date.now(), "showToast: Toast removed.");
-        }, { once: true });
-    }, duration);
-}
-
-// --- Mobile Menu Toggle Function (Declared at top level) ---
-function toggleMobileMenu() {
-    console.log(Date.now(), "toggleMobileMenu: Function called.");
-    if (mobileMenu && mobileMenuOverlay && hamburgerBtn && hamburgerIcon) {
-        const isMenuOpen = mobileMenu.classList.contains('translate-x-0');
-        
-        mobileMenu.classList.toggle('translate-x-full', isMenuOpen);
-        mobileMenu.classList.toggle('translate-x-0', !isMenuOpen);
-        
-        mobileMenuOverlay.classList.toggle('hidden', isMenuOpen);
-        
-        hamburgerBtn.setAttribute('aria-expanded', !isMenuOpen);
-        hamburgerIcon.classList.toggle('fa-bars', isMenuOpen);
-        hamburgerIcon.classList.toggle('fa-times', !isMenuOpen);
-        
-        console.log(Date.now(), "toggleMobileMenu: Mobile menu toggled. Current state:", !isMenuOpen ? "OPEN" : "CLOSED");
-    } else {
-        console.error(Date.now(), "toggleMobileMenu: One or more mobile menu elements not found. Cannot toggle.");
-    }
-}
-
-// --- Authentication Functions (Declared at top level) ---
-async function signInWithGoogle() {
-    console.log(Date.now(), "signInWithGoogle: Function entered.");
-    clearError();
-
-    if (isSigningIn) {
-        console.log(Date.now(), "signInWithGoogle: Already signing in, ignoring multiple clicks.");
-        return;
-    }
-
-    isSigningIn = true;
-    updateSignInButtons(true);
-    
-    const testWindow = window.open('', '_blank', 'width=1,height=1,left=0,top=0');
-    if (testWindow) {
-        testWindow.close();
-        console.log(Date.now(), "signInWithGoogle: Popup blocker check passed.");
-    } else {
-        console.warn(Date.now(), "signInWithGoogle: Popup blocker check failed. Popups might be blocked.");
-        setError("Your browser might be blocking the sign-in popup. Please allow popups for this site and try again.");
-        isSigningIn = false;
-        updateSignInButtons(false);
-        return;
-    }
-
-    console.time("signInWithPopup");
-    try {
-        if (!auth || !googleProvider) {
-            console.error(Date.now(), "signInWithGoogle: Firebase Auth or Google Provider not initialized. Cannot sign in.");
-            setError("Firebase services not ready. Please refresh and try again.");
-            return;
-        }
-        console.log(Date.now(), "signInWithGoogle: Attempting signInWithPopup call...");
-        const result = await signInWithPopup(auth, googleProvider);
-        console.log(Date.now(), "signInWithGoogle: signInWithPopup successful. User:", result.user.uid, result.user.displayName || result.user.email);
-        signinRequiredModal?.classList.add('hidden');
-    } catch (error) {
-        console.error(Date.now(), "signInWithGoogle: Error during Google Sign-In:", error);
-        console.error(Date.now(), "signInWithGoogle: Error code:", error.code);
-        console.error(Date.now(), "signInWithGoogle: Error message:", error.message);
-        if (error.code === 'auth/popup-closed-by-user') {
-            setError('Sign-in popup closed. Please try again.');
-        } else if (error.code === 'auth/cancelled-popup-request') {
-            setError('Sign-in popup was already open or another request was pending. Please try again.');
-        } else if (error.code === 'auth/network-request-failed') {
-            setError('Network error during sign-in. Check your internet connection.');
-        } else if (error.code === 'auth/unauthorized-domain') {
-            setError('Authentication failed: Unauthorized domain. Please check Firebase Console -> Authentication -> Sign-in method -> Authorized domains and add your current domain (e.g., localhost, or your preview URL).');
-        } else if (error.code === 'auth/popup-blocked') {
-            setError('Sign-in popup was blocked by your browser. Please disable popup blockers for this site and try again.');
-        }
-        else {
-            setError(`Failed to sign in: ${error.message}`);
-        }
-    } finally {
-        console.timeEnd("signInWithPopup");
-        isSigningIn = false;
-        updateSignInButtons(false);
-        updateUI();
-    }
-}
-
-// Function to update sign-in button states with loading spinner (Declared at top level)
-function updateSignInButtons(loadingState) {
-    console.log(Date.now(), "updateSignInButtons: Updating sign-in button state to loading:", loadingState);
-    const signInButtons = [signInBtnDesktop, signInBtnMobile, modalSignInBtn];
-    const buttonText = 'Sign In With Google';
-    const loadingText = `
-        <span class="flex items-center justify-center">
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Signing In...
-        </span>
-    `;
-
-    signInButtons.forEach(btn => {
-        if (btn) {
-            btn.innerHTML = loadingState ? loadingText : buttonText;
-            btn.disabled = loadingState;
-            btn.classList.toggle('opacity-70', loadingState);
-            btn.classList.toggle('cursor-not-allowed', loadingState);
-        }
-    });
-}
-
-async function signOutUser() {
-    console.log(Date.now(), "signOutUser: Attempting signOutUser...");
-    clearError();
-    console.time("signOut");
-    try {
-        if (!auth) {
-            console.error(Date.now(), "signOutUser: Firebase Auth not initialized. Cannot sign out.");
-            setError("Firebase services not ready. Cannot sign out.");
-            return;
-        }
-        await signOut(auth);
-        console.log(Date.now(), "signOutUser: User signed out successfully.");
-        showToast("Signed out successfully!", "info");
-    } catch (error) {
-        console.error(Date.now(), "signOutUser: Error signing out:", error);
-        setError(`Failed to sign out: ${error.message}`);
-        showToast(`Failed to sign out: ${error.message}`, "error");
-    } finally {
-        console.timeEnd("signOut");
-        updateUI();
-    }
-}
-
-async function fetchUserData(uid) {
-    console.log(Date.now(), `fetchUserData: Entering fetchUserData for UID: ${uid}`);
-    clearError();
-    if (!db) {
-        console.error(Date.now(), "fetchUserData: Firestore DB not initialized. Cannot fetch user data.");
-        setError("Database not ready. Please refresh.");
-        return;
-    }
-    const userDocRef = doc(db, 'users', uid);
-    try {
-        console.log(Date.now(), `fetchUserData: Attempting to get document for UID: ${uid}`);
-        const userDocSnap = await getDoc(userDocRef);
-        console.log(Date.now(), `fetchUserData: Document snapshot received. Exists: ${userDocSnap.exists()}`);
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            freeGenerationsLeft = userData.freeGenerationsLeft !== undefined ? userData.freeGenerationsLeft : 0;
-            console.log(Date.now(), "fetchUserData: Fetched existing user data:", userData);
-            showToast(`Welcome back, ${currentUser.displayName || currentUser.email}!`, "success");
-        } else {
-            console.log(Date.now(), "fetchUserData: User document does not exist for UID:", uid, ". Initializing new user data in Firestore with 3 free generations.");
-            await setDoc(userDocRef, {
-                freeGenerationsLeft: 3,
-                createdAt: serverTimestamp()
-            });
-            freeGenerationsLeft = 3;
-            console.log(Date.now(), "fetchUserData: New user data initialized in Firestore for UID:", uid);
-            showToast(`Welcome, ${currentUser.displayName || currentUser.email}! You have 3 free generations.`, "success");
-        }
-        localStorage.removeItem('freeGenerationsLeft');
-        console.log(Date.now(), "fetchUserData: Removed freeGenerationsLeft from local storage for authenticated user.");
-    } catch (error) {
-        console.error(Date.now(), "fetchUserData: Error fetching/initializing user data:", error);
-        throw error;
-    } finally {
-        console.log(Date.now(), "fetchUserData: Exiting fetchUserData.");
-    }
-}
-
-function updateUIForAuthStatus() {
-    console.log(Date.now(), "updateUIForAuthStatus: Updating UI for auth status. Current user:", currentUser ? currentUser.displayName || currentUser.email : "None");
-
-    if (userDisplayDesktop) {
-        if (currentUser) {
-            userDisplayDesktop.textContent = `Welcome, ${currentUser.displayName || currentUser.email}!`;
-            userDisplayDesktop.classList.remove('hidden');
-        } else {
-            userDisplayDesktop.classList.add('hidden');
-        }
-    }
-    if (signInBtnDesktop) signInBtnDesktop.classList.toggle('hidden', !!currentUser);
-    if (signOutBtnDesktop) signOutBtnDesktop.classList.toggle('hidden', !currentUser);
-
-    if (userDisplayMobile) {
-        if (currentUser) {
-            userDisplayMobile.textContent = `Welcome, ${currentUser.displayName || currentUser.email}!`;
-            userDisplayMobile.classList.remove('hidden');
-        } else {
-            userDisplayMobile.classList.add('hidden');
-        }
-    }
-    if (signInBtnMobile) signInBtnMobile.classList.toggle('hidden', !!currentUser);
-    if (signOutBtnMobile) signOutBtnMobile.classList.toggle('hidden', !currentUser);
-
-    console.log(Date.now(), "updateUIForAuthStatus: UI updated based on auth status.");
-}
-
-function populateAspectRatioRadios() {
-    console.log(Date.now(), "populateAspectRatioRadios: Populating aspect ratio radios.");
-    if (aspectRatioSelectionDiv) {
-        aspectRatioSelectionDiv.innerHTML = '';
-        ['1:1', '4:5', '9:16', '16:9'].forEach(ratio => {
-            const label = document.createElement('label');
-            label.className = 'inline-flex items-center cursor-pointer';
-            label.innerHTML = `
-                <input type="radio" name="aspectRatio" value="${ratio}" class="form-radio h-5 w-5 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500" ${aspectRatio === ratio ? 'checked' : ''}>
-                <span class="ml-2 text-gray-200 font-helvetica text-sm">${ratio}</span>
-            `;
-            const radioInput = label.querySelector('input');
-            if (radioInput) {
-                radioInput.addEventListener('change', (e) => {
-                    aspectRatio = e.target.value;
-                    console.log(Date.now(), "Event: Aspect ratio changed to:", aspectRatio);
-                    updateImageWrapperAspectRatio(); // Update wrapper aspect ratio immediately
-                });
-            }
-            aspectRatioSelectionDiv.appendChild(label);
-        });
-        console.log(Date.now(), "populateAspectRatioRadios: Aspect ratio radios populated.");
-    } else {
-        console.error(Date.now(), "populateAspectRatioRadios: aspectRatioSelectionDiv element not found.");
-    }
-}
-
-// --- Page Visibility Logic (Declared at top level) ---
-async function setPage(newPage) {
-    console.log(Date.now(), `setPage: Attempting to switch to page: ${newPage}. Current page: ${currentPage}`);
-    if (currentPage === newPage) {
-        console.log(Date.now(), `setPage: Already on page ${newPage}, no change needed.`);
-        return;
-    }
-
-    // Apply fade-out class to current page
-    const oldPageElement = allPageElements.find(el => !el.classList.contains('hidden'));
-    if (oldPageElement) {
-        oldPageElement.classList.remove('animate-fade-in-up');
-        oldPageElement.classList.add('animate-fade-out'); // Assuming you have a fade-out animation in CSS
-        // Hide after animation
-        setTimeout(() => {
-            oldPageElement.classList.add('hidden');
-            oldPageElement.classList.remove('animate-fade-out');
-        }, 500); // Match CSS transition duration
-    }
-
-
-    let newPageElement;
-    if (newPage === 'home') {
-        newPageElement = homePageElement;
-    } else if (newPage === 'generator') {
-        newPageElement = generatorPageElement;
-        updateImageWrapperAspectRatio(); // Ensure correct aspect ratio when navigating to generator page
-    }
-
-    if (newPageElement) {
-        // Show the new page and apply fade-in after a slight delay if an old page was fading out
-        setTimeout(() => {
-            newPageElement.classList.remove('hidden');
-            void newPageElement.offsetWidth; // Trigger reflow for animation
-            newPageElement.classList.add('animate-fade-in-up');
-            console.log(Date.now(), `setPage: Displayed page '${newPage}' and applied animation.`);
-        }, oldPageElement ? 200 : 0); // Small delay if an old page is fading out
-    } else {
-        console.error(Date.now(), `setPage: New page element for '${newPage}' not found.`);
-    }
-
-    currentPage = newPage;
-    updateUI();
-    console.log(Date.now(), `setPage: Page switched to: ${currentPage}.`);
-}
-
-function updateUI() {
-    console.log(Date.now(), `updateUI: Updating UI for current page: ${currentPage}. Auth Ready: ${isAuthReady}`);
-
-    const interactiveElements = [
-        homePageElement, generatorPageElement, logoBtn,
-        hamburgerBtn, closeMobileMenuBtn, mobileMenuOverlay,
-        startCreatingBtn, promptInput, negativePromptInput, copyPromptBtn, clearPromptBtn, generateBtn,
-        enhanceBtn, variationBtn, useEnhancedPromptBtn,
-        downloadBtn, signInBtnDesktop, signOutBtnDesktop,
-        signInBtnMobile, signOutBtnMobile, modalSignInBtn,
-        closeSigninModalBtn
-    ];
-
-    interactiveElements.forEach(el => {
-        if (el) {
-            const isAuthButton = el.id && (el.id.includes('sign-in-btn') || el.id.includes('sign-out-btn') || el.id.includes('modal-sign-in-btn'));
-            const isGeneratorButton = el.id && (el.id === 'generate-image-btn' || el.id === 'enhance-prompt-btn' || el.id === 'generate-variation-ideas-btn');
-            
-            if (isAuthButton) {
-                el.disabled = isSigningIn;
-                el.classList.toggle('opacity-50', isSigningIn);
-                el.classList.toggle('cursor-not-allowed', isSigningIn);
-            } else if (isGeneratorButton) {
-                // Buttons are enabled if isAuthReady is true AND (user is logged in OR has free generations)
-                const shouldDisableGenerator = !isAuthReady || (!currentUser && freeGenerationsLeft <= 0);
-                el.disabled = loading || loadingEnhancePrompt || loadingVariationIdeas || shouldDisableGenerator;
-                el.classList.toggle('opacity-50', el.disabled);
-                el.classList.toggle('cursor-not-allowed', el.disabled);
-            } else {
-                // Other general buttons are enabled if isAuthReady is true
-                el.disabled = !isAuthReady;
-                el.classList.toggle('opacity-50', !isAuthReady);
-                el.classList.toggle('cursor-not-allowed', !isAuthReady);
-            }
-        }
-    });
-
-    homePageElement?.classList.toggle('bg-white/10', currentPage === 'home');
-    homePageElement?.classList.toggle('text-blue-100', currentPage === 'home');
-    homePageElement?.classList.toggle('text-gray-300', currentPage !== 'home');
-
-    generatorPageElement?.classList.toggle('bg-white/10', currentPage === 'generator');
-    generatorPageElement?.classList.toggle('text-blue-100', currentPage === 'generator');
-    generatorPageElement?.classList.toggle('text-gray-300', currentPage !== 'generator');
-    console.log(Date.now(), "updateUI: Header button states updated.");
-
-    if (currentPage === 'generator') {
-        updateGeneratorPageUI();
-    }
-    updateUIForAuthStatus();
-    console.log(Date.now(), "updateUI: Finished general UI update.");
-}
-
-function updateGeneratorPageUI() {
-    console.log(Date.now(), "updateGeneratorPageUI: Updating dynamic generator UI.");
-    if (promptInput) promptInput.value = prompt;
-    if (negativePromptInput) negativePromptInput.value = negativePrompt; // Update negative prompt input
-
-    if (freeGenerationsDisplay) {
-        if (currentUser) {
-            freeGenerationsDisplay.textContent = `You have unlimited generations!`;
-            freeGenerationsDisplay.classList.remove('text-red-400', 'text-gray-400');
-            freeGenerationsDisplay.classList.add('text-green-400');
-            console.log(Date.now(), "updateGeneratorPageUI: Displaying unlimited generations for authenticated user.");
-        } else {
-            freeGenerationsDisplay.textContent = `You have ${freeGenerationsLeft} generations left without sign in.`;
-            if (freeGenerationsLeft <= 0) {
-                freeGenerationsDisplay.classList.remove('text-green-400', 'text-gray-400');
-                freeGenerationsDisplay.classList.add('text-red-400');
-                console.log(Date.now(), "updateGeneratorPageUI: Displaying 0 generations left, red text.");
-            } else {
-                freeGenerationsDisplay.classList.remove('text-red-400', 'text-gray-400');
-                freeGenerationsDisplay.classList.add('text-green-400');
-                console.log(Date.now(), "updateGeneratorPageUI: Displaying free generations left, green text.");
-            }
-        }
-    }
-
-    populateAspectRatioRadios();
-
-    if (generateBtn) {
-        let buttonText = 'Generate Image';
-        let loadingText = 'Generating...';
-
-        if (!currentUser && freeGenerationsLeft <= 0) {
-            buttonText = 'Sign In to Generate More';
-        }
-
-        generateBtn.innerHTML = loading ? `
-            <span class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-                ${loadingText}
-            </span>
-        ` : buttonText;
-
-        generateBtn.classList.toggle('bg-gray-700', loading);
-        generateBtn.classList.toggle('cursor-not-allowed', loading);
-        generateBtn.classList.toggle('bg-gradient-to-r', !loading);
-        generateBtn.classList.toggle('from-blue-700', !loading);
-        generateBtn.classList.toggle('to-indigo-800', !loading);
-        generateBtn.classList.toggle('hover:from-blue-800', !loading);
-        generateBtn.classList.toggle('hover:to-indigo-900', !loading);
-
-        generateBtn.classList.remove('from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800',
-                                   'from-gray-600', 'to-gray-700', 'hover:from-gray-700', 'hover:to-gray-800');
-
-
-        if (loading) {
-            // Handled above
-        } else if (!currentUser && freeGenerationsLeft <= 0) {
-            generateBtn.classList.add('from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800');
-            generateBtn.disabled = false;
-        } else {
-            generateBtn.classList.add('from-blue-700', 'to-indigo-800', 'hover:from-blue-800', 'hover:to-indigo-900');
-            generateBtn.disabled = false;
-        }
-        console.log(Date.now(), "updateGeneratorPageUI: Generate button state updated.");
-    }
-
-    if (errorDisplay) {
-        errorDisplay.textContent = currentError;
-        errorDisplay.classList.toggle('hidden', !currentError);
-        console.log(Date.now(), "updateGeneratorPageUI: Error display updated. Hidden:", !currentError);
-    }
-
-    if (imageDisplayContainer && generatedImageElement) {
-        if (loading) {
-            imageDisplayContainer.classList.add('hidden');
-            console.log(Date.now(), "updateGeneratorPageUI: Image container hidden (loading).");
-        } else if (imageUrl) {
-            imageDisplayContainer.classList.remove('hidden');
-            generatedImageElement.src = imageUrl;
-            generatedImageElement.alt = `AI generated image based on prompt: ${prompt}`;
-            generatedImageElement.classList.add('animate-image-reveal');
-            console.log(Date.now(), "updateGeneratorPageUI: Image container shown with new image.");
-            // NEW DEBUG LOGS FOR IMAGE DISPLAY
-            console.log(Date.now(), "DEBUG: generatedImageElement.outerHTML:", generatedImageElement.outerHTML);
-            console.log(Date.now(), "DEBUG: imageDisplayContainer.outerHTML:", imageDisplayContainer.outerHTML);
-        } else {
-            imageDisplayContainer.classList.add('hidden');
-            console.log(Date.now(), "updateGeneratorPageUI: Image container hidden (no image).");
-        }
-    }
-
-    if (enhanceBtn) {
-        enhanceBtn.innerHTML = loadingEnhancePrompt ? `
-            <span class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Enhancing...
-            </span>
-        ` : `<i class="fas fa-magic mr-2"></i> Enhance Prompt`;
-        enhanceBtn.classList.toggle('bg-gray-700', loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('cursor-not-allowed', loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('bg-gradient-to-r', !loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('from-blue-600', !loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('to-cyan-700', !loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('hover:from-blue-700', !loadingEnhancePrompt);
-        enhanceBtn.classList.toggle('hover:to-cyan-800', !loadingEnhancePrompt);
-        console.log(Date.now(), "updateGeneratorPageUI: Enhance button state updated.");
-    }
-
-    if (enhancedPromptDisplay && enhancedPromptText) {
-        enhancedPromptText.textContent = enhancedPrompt;
-        enhancedPromptDisplay.classList.toggle('hidden', !enhancedPrompt);
-        // Show/hide use-enhanced-prompt-btn based on enhancedPrompt presence
-        if (useEnhancedPromptBtn) {
-            useEnhancedPromptBtn.classList.toggle('hidden', !enhancedPrompt);
-        }
-        console.log(Date.now(), "updateGeneratorPageUI: Enhanced prompt display updated. Hidden:", !enhancedPrompt);
-    }
-
-    if (variationBtn) {
-        variationBtn.innerHTML = loadingVariationIdeas ? `
-            <span class="flex items-center justify-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Generating Ideas...
-            </span>
-        ` : `<i class="fas fa-lightbulb mr-2"></i> Get Variation Ideas`;
-        variationBtn.classList.toggle('bg-gray-700', loadingVariationIdeas);
-        variationBtn.classList.toggle('cursor-not-allowed', loadingVariationIdeas);
-        variationBtn.classList.toggle('bg-gradient-to-r', !loadingVariationIdeas);
-        variationBtn.classList.toggle('from-green-700', !loadingVariationIdeas);
-        variationBtn.classList.toggle('to-emerald-700', !loadingVariationIdeas);
-        variationBtn.classList.toggle('hover:from-green-800', !loadingVariationIdeas);
-        variationBtn.classList.toggle('hover:to-emerald-800', !loadingVariationIdeas);
-        console.log(Date.now(), "updateGeneratorPageUI: Variation ideas button state updated.");
-    }
-
-    if (variationIdeasDisplay && variationIdeasList) {
-        variationIdeasList.innerHTML = variationIdeas.map(idea => `<li>${idea}</li>`).join('');
-        variationIdeasDisplay.classList.toggle('hidden', variationIdeas.length === 0);
-        console.log(Date.now(), "updateGeneratorPageUI: Variation ideas display updated. Hidden:", variationIdeas.length === 0);
-    }
-}
-
-/**
- * Dynamically sets the padding-bottom on the image wrapper to maintain aspect ratio.
- * This creates a container that holds the image without stretching it.
- */
-function updateImageWrapperAspectRatio() {
-    if (!generatedImageWrapper) {
-        console.warn(Date.now(), "updateImageWrapperAspectRatio: generatedImageWrapper not found.");
-        return;
-    }
-
-    let paddingBottomPercentage;
-    switch (aspectRatio) {
-        case '1:1': paddingBottomPercentage = '100%'; break; // Height = Width
-        case '4:5': paddingBottomPercentage = '125%'; break; // Height = 5/4 * Width
-        case '9:16': paddingBottomPercentage = '177.77%'; break; // Height = 16/9 * Width
-        case '16:9': paddingBottomPercentage = '56.25%'; break; // Height = 9/16 * Width
-        default: paddingBottomPercentage = '100%'; break; // Default to square
-    }
-
-    // Apply the padding-bottom hack to the wrapper
-    generatedImageWrapper.style.position = 'relative';
-    generatedImageWrapper.style.width = '100%'; // Ensure it takes full width
-    generatedImageWrapper.style.paddingBottom = paddingBottomPercentage;
-    generatedImageWrapper.style.height = '0'; // Crucial for padding-bottom hack
-
-    // Ensure the image inside is absolutely positioned to fill this new container
-    if (generatedImageElement) {
-        generatedImageElement.style.position = 'absolute';
-        generatedImageElement.style.top = '0';
-        generatedImageElement.style.left = '0';
-        generatedImageElement.style.width = '100%';
-        generatedImageElement.style.height = '100%';
-        generatedImageElement.style.objectFit = 'contain'; // This is key: image fits without stretching
-    }
-    console.log(Date.now(), `updateImageWrapperAspectRatio: Wrapper aspect ratio set to ${aspectRatio} (${paddingBottomPercentage}).`);
-}
-
-/**
- * Calls the Gemini API to enhance the current prompt for more detailed and versatile image generation.
- */
-async function enhancePrompt() {
-    console.log(Date.now(), "enhancePrompt: Function called.");
-    clearError();
-
-    if (!IMAGEN_GEMINI_API_KEY || IMAGEN_GEMINI_API_KEY === "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE") {
-        setError('API Key is not configured for prompt enhancement. Please replace "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE" in script.js with your actual key obtained from Google Cloud Console.');
-        updateUI();
-        console.error(Date.now(), "enhancePrompt: API Key not configured.");
-        showToast("API Key missing for prompt enhancement. Check console.", "error");
-        return;
-    }
-
-    if (!prompt.trim()) {
-        setError('Please enter a prompt to enhance.');
-        updateUI();
-        showToast("Enter a prompt to enhance.", "info");
-        return;
-    }
-
-    loadingEnhancePrompt = true;
-    enhancedPrompt = ''; // Clear previous enhanced prompt
-    updateUI();
-    showToast("Enhancing your prompt...", "info");
-    console.time("enhancePromptAPI");
-
-    try {
-        const promptToEnhance = promptInput.value; // Ensure we use the current value from the input
-        const geminiPrompt = `
-            You are an expert prompt engineer for AI image generation.
-            Take the following user prompt and expand it into a highly detailed, descriptive, and creative prompt for an image generation model.
-            Focus on adding details that enhance the visual quality, atmosphere, and specific characteristics of the subject, without forcing a "photorealistic" style unless explicitly requested.
-            Consider adding:
-            - Specific descriptive adjectives for the subject and scene.
-            - Details about lighting (e.g., "soft morning light", "dramatic chiaroscuro", "neon glow").
-            - Environmental details (e.g., "lush foliage", "ancient cobblestones", "futuristic cityscape").
-            - Artistic style suggestions if appropriate (e.g., "oil painting", "concept art", "pixel art", "surrealist", "anime style").
-            - Compositional elements (e.g., "wide shot", "close-up", "dynamic angle").
-            - Textures, colors, and mood.
-            - Quality keywords like "ultra-detailed", "high resolution", "intricate".
-
-            Do not include any conversational text, just the enhanced prompt.
-            Original prompt: "${promptToEnhance}"
-        `;
-
-        const payload = { contents: [{ role: "user", parts: [{ text: geminiPrompt }] }] };
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${IMAGEN_GEMINI_API_KEY}`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Gemini API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
-        }
-
-        const result = await response.json();
-        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-            enhancedPrompt = result.candidates[0].content.parts[0].text.trim();
-            showToast("Prompt enhanced successfully!", "success");
-            console.log(Date.now(), "enhancePrompt: Enhanced prompt received:", enhancedPrompt);
-        } else {
-            setError('Failed to enhance prompt. No response from AI.');
-            showToast('Failed to enhance prompt.', "error");
-            console.error(Date.now(), 'enhancePrompt: AI response missing content:', result);
-        }
-    } catch (e) {
-        setError(`Error enhancing prompt: ${e.message || 'Unknown error'}.`);
-        showToast(`Prompt enhancement failed: ${e.message}`, "error");
-        console.error(Date.now(), 'enhancePrompt: Error during prompt enhancement:', e);
-    } finally {
-        loadingEnhancePrompt = false;
-        updateUI();
-        console.timeEnd("enhancePromptAPI");
-    }
-}
-
-/**
- * Calls the Gemini API to generate creative variation ideas for the current prompt.
- */
-async function generateVariationIdeas() {
-    console.log(Date.now(), "generateVariationIdeas: Function called.");
-    clearError();
-
-    if (!IMAGEN_GEMINI_API_KEY || IMAGEN_GEMINI_API_KEY === "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE") {
-        setError('API Key is not configured for variation ideas. Please replace "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE" in script.js with your actual key obtained from Google Cloud Console.');
-        updateUI();
-        console.error(Date.now(), "generateVariationIdeas: API Key not configured.");
-        showToast("API Key missing for variation ideas. Check console.", "error");
-        return;
-    }
-
-    if (!prompt.trim()) {
-        setError('Please enter a prompt to get variation ideas.');
-        updateUI();
-        showToast("Enter a prompt to get ideas.", "info");
-        return;
-    }
-
-    loadingVariationIdeas = true;
-    variationIdeas = []; // Clear previous ideas
-    updateUI();
-    showToast("Generating variation ideas...", "info");
-    console.time("generateVariationIdeasAPI");
-
-    try {
-        const promptForIdeas = promptInput.value; // Ensure we use the current value from the input
-        const geminiPrompt = `
-            Generate 3-5 distinct creative variations for the following image generation prompt.
-            Each variation should be a concise, single sentence, focusing on different styles, moods, or minor subject alterations.
-            Present them as a numbered list. Do not include any conversational text, just the numbered list.
-            Original prompt: "${promptForIdeas}"
-        `;
-
-        const payload = { contents: [{ role: "user", parts: [{ text: geminiPrompt }] }] };
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${IMAGEN_GEMINI_API_KEY}`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Gemini API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
-        }
-
-        const result = await response.json();
-        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-            const rawIdeas = result.candidates[0].content.parts[0].text.trim();
-            // Parse the numbered list into an array
-            variationIdeas = rawIdeas.split('\n').map(line => line.replace(/^\d+\.\s*/, '').trim()).filter(line => line.length > 0);
-            showToast("Variation ideas generated!", "success");
-            console.log(Date.now(), "generateVariationIdeas: Ideas received:", variationIdeas);
-        } else {
-            setError('Failed to generate variation ideas. No response from AI.');
-            showToast('Failed to generate ideas.', "error");
-            console.error(Date.now(), 'generateVariationIdeas: AI response missing content:', result);
-        }
-    } catch (e) {
-        setError(`Error generating variation ideas: ${e.message || 'Unknown error'}.`);
-        showToast(`Idea generation failed: ${e.message}`, "error");
-        console.error(Date.now(), 'generateVariationIdeas: Error during idea generation:', e);
-    } finally {
-        loadingVariationIdeas = false;
-        updateUI();
-        console.timeEnd("generateVariationIdeasAPI");
-    }
-}
-
-
-async function generateImage() {
-    console.log(Date.now(), "generateImage: Function called.");
-    clearError();
-
-    if (!IMAGEN_GEMINI_API_KEY || IMAGEN_GEMINI_API_KEY === "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE") {
-        setError('API Key is not configured for image generation. Please replace "YOUR_ACTUAL_GENERATED_API_KEY_HERE_PASTE_YOUR_KEY_HERE" in script.js with your actual key obtained from Google Cloud Console and ensure the Imagen API is enabled.');
-        updateUI();
-        console.error(Date.now(), "generateImage: API Key not configured.");
-        showToast("API Key missing for image generation. Check console.", "error");
-        return;
-    }
-
-    if (!prompt.trim()) {
-        setError('Please enter a prompt to generate an image.');
-        updateUI();
-        console.warn(Date.now(), "generateImage: Prompt is empty.");
-        showToast("Please enter a prompt to generate an image.", "info");
-        return;
-    }
-
-    if (!currentUser) {
-        if (freeGenerationsLeft <= 0) {
-            console.log(Date.now(), "generateImage: Free generations exhausted for unauthenticated user. Showing sign-in modal.");
-            signinRequiredModal?.classList.remove('hidden');
-            updateUI();
-            showToast("You've used your free generations. Please sign in!", "info");
-            return;
-        } else {
-            freeGenerationsLeft--;
-            localStorage.setItem('freeGenerationsLeft', freeGenerationsLeft);
-            console.log(Date.now(), `generateImage: Unauthenticated generation. ${freeGenerationsLeft} left.`);
-            showToast(`Generating image... ${freeGenerationsLeft} free generations left.`, "info");
-        }
-    } else {
-        console.log(Date.now(), "generateImage: Authenticated user generating image (unlimited).");
-        showToast("Generating image...", "info");
-    }
-
-    loading = true;
-    imageUrl = '';
-    updateUI();
-    console.log(Date.now(), "generateImage: Starting image generation request.");
-    console.time("imageGenerationAPI");
-
-    try {
-        let finalPrompt = promptInput.value; // Use current value from input
-        
-        const textKeywords = ['text', 'number', 'letter', 'font', 'word', 'digits', 'characters'];
-        const containsTextKeyword = textKeywords.some(keyword => finalPrompt.toLowerCase().includes(keyword));
-
-        if (containsTextKeyword) {
-            finalPrompt += ", clear, legible, sharp, high-resolution text, sans-serif font, precisely rendered, not distorted, no gibberish, accurate spelling, crisp edges";
-            console.log(Date.now(), "generateImage: Added text-specific enhancements to prompt.");
-        }
-
-        // --- ENHANCED ASPECT RATIO PROMPT ENGINEERING ---
-        let aspectRatioInstruction = '';
-        switch (aspectRatio) {
-            case '1:1': 
-                aspectRatioInstruction = ', square format, 1:1 aspect ratio, balanced composition, perfect square, symmetrical frame'; 
-                break;
-            case '4:5': 
-                aspectRatioInstruction = ', portrait orientation, 4:5 aspect ratio, tall and narrow composition, vertical format, ideal for social media portrait posts'; 
-                break;
-            case '9:16': 
-                aspectRatioInstruction = ', ultra-portrait orientation, 9:16 aspect ratio, extremely tall and narrow composition, vertical smartphone screen format, full-screen mobile display'; 
-                break;
-            case '16:9': 
-                aspectRatioInstruction = ', landscape orientation, 16:9 aspect ratio, wide and cinematic composition, horizontal widescreen format, film aspect ratio'; 
-                break;
-        }
-        finalPrompt += aspectRatioInstruction;
-        // --- END ENHANCED ASPECT RATIO PROMPT ENGINEERING ---
-
-        // --- ADD NEGATIVE PROMPT ---
-        if (negativePromptInput && negativePromptInput.value.trim()) {
-            finalPrompt += ` --no ${negativePromptInput.value.trim()}`;
-            console.log(Date.now(), "generateImage: Added negative prompt.");
-        }
-        // --- END ADD NEGATIVE PROMPT ---
-
-        console.log(Date.now(), "generateImage: Final prompt for Imagen API:", finalPrompt);
-
-
-        const payload = { instances: { prompt: finalPrompt }, parameters: { "sampleCount": 1 } };
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${IMAGEN_GEMINI_API_KEY}`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        console.log(Date.now(), "generateImage: API fetch response received.");
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Imagen API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
-        }
-
-        const result = await response.json();
-        console.log(Date.now(), "generateImage: API response parsed.", result);
-
-        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-            imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-            console.log(Date.now(), "generateImage: Image URL successfully created from Base64 data.");
-            showToast("Image generated successfully!", "success");
-        } else {
-            setError('Failed to generate image. No image data received.');
-            showToast('Failed to generate image. No data received.', "error");
-            console.error(Date.now(), 'generateImage: API response missing image data:', result);
-        }
-    } catch (e) {
-        setError(`An error occurred during image generation: ${e.message || 'Unknown error'}. Please try again.`);
-        showToast(`Image generation failed: ${e.message}`, "error");
-        console.error(Date.now(), 'generateImage: Error during image generation:', e);
-    } finally {
-        console.timeEnd("imageGenerationAPI");
-        loading = false;
-        updateUI();
-        console.log(Date.now(), "generateImage: Image generation process finished (loading state reset).");
-    }
-}
-
-function downloadImage() {
-    console.log(Date.now(), "downloadImage: Function called.");
-    if (imageUrl) {
-        const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = 'generated_image.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast("Image downloaded!", "success");
-        console.log(Date.now(), "downloadImage: Image download initiated.");
-    } else {
-        showToast("No image to download.", "info");
-        console.warn(Date.now(), "downloadImage: No image URL available to download.");
-    }
-}
-
-function copyToClipboard(text) {
-    console.log(Date.now(), "copyToClipboard: Attempting to copy text.");
-    if (!text) {
-        showToast("Nothing to copy!", "info");
-        return;
-    }
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            showToast("Prompt copied to clipboard!", "success");
-            console.log(Date.now(), "copyToClipboard: Text successfully copied.");
-        } else {
-            throw new Error('execCommand failed');
-        }
-    } catch (err) {
-        console.error(Date.now(), 'copyToClipboard: Failed to copy text using execCommand:', err);
-        try {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast("Prompt copied to clipboard!", "success");
-                console.log(Date.now(), "copyToClipboard: Text successfully copied using Clipboard API.");
-            }).catch(clipboardErr => {
-                console.error(Date.now(), 'copyToClipboard: Failed to copy text using Clipboard API:', clipboardErr);
-                showToast("Failed to copy prompt. Please try manually.", "error");
-            });
-        } catch (apiErr) {
-            console.error(Date.now(), 'copyToClipboard: Clipboard API not available or failed:', apiErr);
-            showToast("Failed to copy prompt. Please try manually.", "error");
-        }
-    }
-    document.body.removeChild(textarea);
-}
-
-function setError(message) {
-    console.error(Date.now(), "setError: Setting error:", message);
-    currentError = message;
-}
-
-function clearError() {
-    console.log(Date.now(), "clearError: Clearing error.");
-    currentError = '';
-}
-
-/**
- * Dynamically sets the padding-bottom on the image wrapper to maintain aspect ratio.
- * This creates a container that holds the image without stretching it.
- */
-function updateImageWrapperAspectRatio() {
-    if (!generatedImageWrapper) {
-        console.warn(Date.now(), "updateImageWrapperAspectRatio: generatedImageWrapper not found.");
-        return;
-    }
-
-    let paddingBottomPercentage;
-    switch (aspectRatio) {
-        case '1:1': paddingBottomPercentage = '100%'; break; // Height = Width
-        case '4:5': paddingBottomPercentage = '125%'; break; // Height = 5/4 * Width
-        case '9:16': paddingBottomPercentage = '177.77%'; break; // Height = 16/9 * Width
-        case '16:9': paddingBottomPercentage = '56.25%'; break; // Height = 9/16 * Width
-        default: paddingBottomPercentage = '100%'; break; // Default to square
-    }
-
-    // Apply the padding-bottom hack to the wrapper
-    generatedImageWrapper.style.position = 'relative';
-    generatedImageWrapper.style.width = '100%'; // Ensure it takes full width
-    generatedImageWrapper.style.paddingBottom = paddingBottomPercentage;
-    generatedImageWrapper.style.height = '0'; // Crucial for padding-bottom hack
-
-    // Ensure the image inside is absolutely positioned to fill this new container
-    if (generatedImageElement) {
-        generatedImageElement.style.position = 'absolute';
-        generatedImageElement.style.top = '0';
-        generatedImageElement.style.left = '0';
-        generatedImageElement.style.width = '100%';
-        generatedImageElement.style.height = '100%';
-        generatedImageElement.style.objectFit = 'contain'; // This is key: image fits without stretching
-    }
-    console.log(Date.now(), `updateImageWrapperAspectRatio: Wrapper aspect ratio set to ${aspectRatio} (${paddingBottomPercentage}).`);
-}
-
-
-// --- Event Listeners Setup (Declared at top level, called in initApp) ---
-function setupEventListeners() {
-    console.log(Date.now(), "setupEventListeners: Setting up all event listeners...");
-
-    // Header Navigation Buttons
-    const homeBtn = getElement('home-btn');
-    if (homeBtn) {
-        homeBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Desktop Home button clicked."); setPage('home'); });
-        console.log(Date.now(), "Event Listener Attached: home-btn");
-    }
-
-    const generatorBtn = getElement('generator-btn');
-    if (generatorBtn) {
-        generatorBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Desktop Generator button clicked."); setPage('generator'); });
-        console.log(Date.now(), "Event Listener Attached: generator-btn");
-    }
-
-    if (logoBtn) {
-        logoBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Logo button clicked."); setPage('home'); });
-        console.log(Date.now(), "Event Listener Attached: logoBtn");
-    }
-
-    // Mobile Menu Buttons
-    if (hamburgerBtn) {
-        hamburgerBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Hamburger button clicked."); toggleMobileMenu(); });
-        console.log(Date.now(), "Event Listener Attached: hamburgerBtn");
-    }
-
-    if (closeMobileMenuBtn) {
-        closeMobileMenuBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Close Mobile Menu button clicked."); toggleMobileMenu(); });
-        console.log(Date.now(), "Event Listener Attached: closeMobileMenuBtn");
-    }
-
-    if (mobileMenuOverlay) {
-        mobileMenuOverlay.addEventListener('click', () => {
-            console.log(Date.now(), "Event: Mobile menu overlay clicked.");
-            if (mobileMenu?.classList.contains('translate-x-0')) {
-                toggleMobileMenu();
-            }
-        });
-        console.log(Date.now(), "Event Listener Attached: mobileMenuOverlay");
-    }
-
-    mobileNavLinks.forEach(link => {
-        if (link) {
-            link.addEventListener('click', (e) => {
-                console.log(Date.now(), `Event: Mobile nav link clicked: ${e.target.id}`);
-                if (e.target.id === 'mobile-home-btn') setPage('home');
-                else if (e.target.id === 'mobile-generator-btn') setPage('generator');
-                toggleMobileMenu(); // Close mobile menu after navigation
-            });
-            console.log(Date.now(), `Event Listener Attached: mobile-nav-link (${link.id})`);
-        }
-    });
-
-    // Home Page Button
-    if (startCreatingBtn) {
-        startCreatingBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Start Creating Now button clicked."); setPage('generator'); });
-        console.log(Date.now(), "Event Listener Attached: startCreatingBtn");
-    }
-
-    // Generator Page Controls
-    if (promptInput) {
-        promptInput.addEventListener('input', (e) => {
-            prompt = e.target.value;
-            console.log(Date.now(), "Event: Prompt input changed. Current prompt:", prompt);
-        });
-        console.log(Date.now(), "Event Listener Attached: promptInput");
-    }
-
-    if (negativePromptInput) { // New: Negative prompt input listener
-        negativePromptInput.addEventListener('input', (e) => {
-            negativePrompt = e.target.value;
-            console.log(Date.now(), "Event: Negative prompt input changed. Current negative prompt:", negativePrompt);
-        });
-        console.log(Date.now(), "Event Listener Attached: negativePromptInput");
-    }
-
-    if (copyPromptBtn) {
-        copyPromptBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Copy Prompt button clicked."); copyToClipboard(promptInput.value); });
-        console.log(Date.now(), "Event Listener Attached: copyPromptBtn");
-    }
-
-    if (clearPromptBtn) {
-        clearPromptBtn.addEventListener('click', () => {
-            console.log(Date.now(), "Event: Clear Prompt button clicked.");
-            promptInput.value = '';
-            prompt = '';
-            if (negativePromptInput) negativePromptInput.value = ''; // Clear negative prompt input
-            negativePrompt = ''; // Clear negative prompt state
-            enhancedPrompt = ''; // Clear enhanced prompt too
-            variationIdeas = []; // Clear variation ideas too
-            updateUI(); // Re-render UI to hide enhanced/variation displays
-            showToast("Prompt cleared!", "info");
-        });
-        console.log(Date.now(), "Event Listener Attached: clearPromptBtn");
-    }
-
-    if (generateBtn) {
-        generateBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Generate Image button clicked."); generateImage(); });
-        console.log(Date.now(), "Event Listener Attached: generateBtn");
-    }
-    if (enhanceBtn) {
-        enhanceBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Enhance Prompt button clicked."); enhancePrompt(); });
-        console.log(Date.now(), "Event Listener Attached: enhanceBtn");
-    }
-    if (variationBtn) {
-        variationBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Get Variation Ideas button clicked."); generateVariationIdeas(); });
-        console.log(Date.now(), "Event Listener Attached: variationBtn");
-    }
-
-    if (useEnhancedPromptBtn) {
-        useEnhancedPromptBtn.addEventListener('click', () => {
-            console.log(Date.now(), "Event: Use Enhanced Prompt button clicked.");
-            prompt = enhancedPrompt;
-            if (promptInput) promptInput.value = prompt; // Update the textarea
-            enhancedPrompt = ''; // Clear it after use
-            updateUI();
-            showToast("Enhanced prompt applied!", "success");
-        });
-        console.log(Date.now(), "Event Listener Attached: useEnhancedPromptBtn");
-    }
-
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Download Image button clicked."); downloadImage(); });
-        console.log(Date.now(), "Event Listener Attached: downloadBtn");
-    }
-
-    // Auth Buttons
-    if (signInBtnDesktop) {
-        signInBtnDesktop.addEventListener('click', () => { console.log(Date.now(), "Event: Desktop Sign In button clicked."); signInWithGoogle(); });
-        console.log(Date.now(), "Event Listener Attached: signInBtnDesktop");
-    }
-    if (signOutBtnDesktop) {
-        signOutBtnDesktop.addEventListener('click', () => { console.log(Date.now(), "Event: Desktop Sign Out button clicked."); signOutUser(); });
-        console.log(Date.now(), "Event Listener Attached: signOutBtnDesktop");
-    }
-    if (signInBtnMobile) {
-        signInBtnMobile.addEventListener('click', () => { console.log(Date.now(), "Event: Mobile Sign In button clicked."); signInWithGoogle(); });
-        console.log(Date.now(), "Event Listener Attached: signInBtnMobile");
-    }
-    if (signOutBtnMobile) {
-        signOutBtnMobile.addEventListener('click', () => { console.log(Date.now(), "Event: Mobile Sign Out button clicked."); signOutUser(); });
-        console.log(Date.now(), "Event Listener Attached: signOutBtnMobile");
-    }
-    if (modalSignInBtn) {
-        modalSignInBtn.addEventListener('click', () => { console.log(Date.now(), "Event: Modal Sign In button clicked."); signInWithGoogle(); });
-        console.log(Date.now(), "Event Listener Attached: modalSignInBtn");
-    }
-
-    if (closeSigninModalBtn) {
-        closeSigninModalBtn.addEventListener('click', () => {
-            console.log(Date.now(), "Event: Close Sign-in Modal button clicked.");
-            signinRequiredModal?.classList.add('hidden');
-        });
-        console.log(Date.now(), "Event Listener Attached: closeSigninModalBtn");
-    }
-
-    if (closeDebugMessageBtn) {
-        closeDebugMessageBtn.addEventListener('click', () => {
-            console.log(Date.now(), "Event: Close Debug Message button clicked.");
-            persistentDebugMessage?.classList.add('hidden');
-        });
-        console.log(Date.now(), "Event Listener Attached: closeDebugMessageBtn");
-    }
-
-    populateAspectRatioRadios();
-    console.log(Date.now(), "setupEventListeners: All event listeners setup attempted.");
-}
-
-// --- Main application initialization function ---
-function initApp() {
-    console.log(Date.now(), "initApp: Starting application initialization.");
-    console.time("AppInitialization");
-
-    try {
-        // Initialize Firebase services first
-        initFirebase();
-
-        // Populate UI Element References here, after DOM is ready
-        homePageElement = getElement('home-page-element');
-        generatorPageElement = getElement('generator-page-element');
-        allPageElements = [homePageElement, generatorPageElement].filter(Boolean); // Filter out nulls
-
-        persistentDebugMessage = getElement('persistent-debug-message');
-        closeDebugMessageBtn = getElement('close-debug-message-btn');
-
-        promptInput = getElement('prompt-input');
-        negativePromptInput = getElement('negative-prompt-input'); // Get reference to negative prompt input
-        copyPromptBtn = getElement('copy-prompt-btn');
-        clearPromptBtn = getElement('clear-prompt-btn');
-        aspectRatioSelectionDiv = getElement('aspect-ratio-selection');
-        generateBtn = getElement('generate-image-btn');
-        enhanceBtn = getElement('enhance-prompt-btn');
-        variationBtn = getElement('generate-variation-ideas-btn');
-        useEnhancedPromptBtn = getElement('use-enhanced-prompt-btn');
-        downloadBtn = getElement('download-image-btn');
-        errorDisplay = getElement('error-display');
-        imageDisplayContainer = getElement('image-display-container');
-        generatedImageElement = getElement('generated-image');
-        generatedImageWrapper = getElement('generated-image-wrapper'); // Get reference to the new wrapper
-
-        enhancedPromptDisplay = getElement('enhanced-prompt-display');
-        enhancedPromptText = getElement('enhanced-prompt-text');
-        variationIdeasDisplay = getElement('variation-ideas-display');
-        variationIdeasList = getElement('variation-ideas-list');
-
-        userDisplayDesktop = getElement('user-display-desktop');
-        signInBtnDesktop = getElement('sign-in-btn-desktop');
-        signOutBtnDesktop = getElement('sign-out-btn-desktop');
-        userDisplayMobile = getElement('user-display-mobile');
-        signInBtnMobile = getElement('sign-in-btn-mobile');
-        signOutBtnMobile = getElement('sign-out-btn-mobile');
-        freeGenerationsDisplay = getElement('free-generations-display');
-        signinRequiredModal = getElement('signin-required-modal');
-        modalSignInBtn = getElement('modal-sign-in-btn');
-        closeSigninModalBtn = getElement('close-signin-modal-btn');
-        startCreatingBtn = getElement('start-creating-btn');
-        logoBtn = getElement('logo-btn');
-
-        hamburgerBtn = getElement('hamburger-btn');
-        hamburgerIcon = getElement('hamburger-icon');
-        mobileMenu = getElement('mobile-menu');
-        mobileMenuOverlay = getElement('mobile-menu-overlay');
-        closeMobileMenuBtn = getElement('close-mobile-menu-btn');
-        mobileNavLinks = document.querySelectorAll('#mobile-menu .mobile-nav-link'); // NodeList, not single element
-
-        toastContainer = getElement('toast-container');
-
-        console.log(Date.now(), "initApp: All UI element references obtained.");
-
-        console.log(Date.now(), "initApp: Calling setupEventListeners().");
-        setupEventListeners();
-        console.log(Date.now(), "initApp: Calling setPage('home').");
-        setPage('home'); // Set initial page
-        updateUI(); // Initial UI update after all elements are ready and listeners are set up
-
-        console.timeEnd("AppInitialization");
-        console.log(Date.now(), "initApp: App initialization complete.");
-
-    } catch (criticalError) {
-        console.error(Date.now(), "CRITICAL ERROR: Uncaught error during initApp execution:", criticalError);
-        document.body.innerHTML = `<div style="color: white; background-color: red; padding: 20px; text-align: center;">
-            <h1>Application Failed to Load</h1>
-            <p>A critical error occurred during startup. Please check your browser's console (F12) for details.</p>
-            <p>Error: ${criticalError.message}</p>
-        </div>`;
-        if (persistentDebugMessage) {
-            persistentDebugMessage.classList.remove('hidden');
-            persistentDebugMessage.querySelector('p').textContent = `A critical error occurred during startup: ${criticalError.message}. Please open your browser's Developer Console (F12) and copy all messages to the AI for debugging.`;
-        }
+setupModal(brainstormBtn, brainstormModal);
+setupModal(codeGeneratorBtn, codeGeneratorModal);
+
+brainstormForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const topic = brainstormInput.value.trim();
+    if (topic) {
+        const fullPrompt = `Let's brainstorm some creative ideas about: "${topic}"`;
+        messageInput.value = fullPrompt;
+        sendBtn.disabled = false;
+        messageForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        brainstormInput.value = '';
+        brainstormModal.style.display = 'none';
     }
-}
-
-// --- DOMContentLoaded Listener (Main entry point after DOM is ready) ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log(Date.now(), "script.js: DOMContentLoaded event listener triggered.");
-    initApp(); // Call the main initialization function
 });
+
+codeGeneratorForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const description = codeDescriptionInput.value.trim();
+    if (!description) return;
+    
+    addUserMessage(`Request: Create a website about "${description.substring(0, 50)}..."`);
+    addThinkingIndicator();
+    
+    codeDescriptionInput.value = '';
+    codeGeneratorModal.style.display = 'none';
+    setGeneratingState(true);
+
+    try {
+        const code = await callGeminiAPI(description, { isCodeGeneration: true });
+        removeThinkingIndicator();
+        addAiCodeResponse(code);
+    } catch(error) {
+        console.error("Code Generation API Call failed:", error);
+        removeThinkingIndicator();
+        addAiResponse(`<p class="text-red-500">I hit a snag trying to build that for you. Could we try describing it a different way?</p>`);
+    } finally {
+        setGeneratingState(false);
+    }
+});
+
+revealBtn.addEventListener('click', () => {
+    if (animationTimeout && currentAnimationTarget) {
+        finalizeResponse(currentAnimationTarget);
+    }
+});
+
+// --- UI Helper Functions ---
+
+function setGeneratingState(isGen) {
+    isGenerating = isGen;
+    statusIndicator.innerHTML = isGen 
+        ? `<div class="flex items-center gap-2 text-sm text-yellow-500"><svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verse is typing...</div>`
+        : `<div class="flex items-center gap-2 text-sm text-green-500"><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>Verse is Online</div>`;
+}
+
+function addUserMessage(prompt) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'flex items-start gap-4 justify-end';
+    messageEl.innerHTML = `
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 max-w-2xl p-4 rounded-xl rounded-br-none text-white">
+            <p>${prompt.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+        </div>
+         <div class="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center font-bold border border-border-color text-slate-500">Y</div>
+    `;
+    chatContainer.appendChild(messageEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function addAiResponse(htmlResponse) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'flex items-start gap-4 max-w-2xl';
+    messageEl.innerHTML = `
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex-shrink-0 flex items-center justify-center font-bold text-white shadow-sm">V</div>
+        <div class="bg-bg-tertiary p-4 rounded-xl rounded-tl-none prose prose-slate prose-sm max-w-none">
+            <strong class="font-semibold text-text-primary not-prose">Verse</strong>
+            <div class="ai-response-content text-text-primary leading-relaxed not-prose"></div>
+        </div>`;
+    chatContainer.appendChild(messageEl);
+    const responseContentEl = messageEl.querySelector('.ai-response-content');
+    animateText(responseContentEl, htmlResponse);
+}
+
+function addAiCodeResponse(code) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'flex items-start gap-4 max-w-3xl';
+    const escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    
+    messageEl.innerHTML = `
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex-shrink-0 flex items-center justify-center font-bold text-white shadow-sm">V</div>
+        <div class="bg-bg-tertiary p-4 rounded-xl rounded-tl-none w-full">
+            <strong class="font-semibold text-text-primary">Verse</strong>
+            <p class="text-text-primary leading-relaxed mb-3">I've finished building that for you. Here is the complete code, presented in a file that you can easily copy.</p>
+            
+            <div class="mt-4 border border-border-color rounded-lg bg-white shadow-sm overflow-hidden">
+                <div class="flex justify-between items-center px-4 py-2 border-b border-border-color bg-bg-secondary">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span class="text-sm font-medium text-text-secondary">index.html</span>
+                    </div>
+                    <button class="copy-code-btn bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold py-1 px-2 rounded transition-colors">Copy Code</button>
+                </div>
+                <div class="max-h-96 overflow-y-auto">
+                    <pre class="p-4 text-sm"><code>${escapedCode}</code></pre>
+                </div>
+            </div>
+            <div class="response-actions-container mt-3 pt-3 border-t border-border-color"></div>
+        </div>`;
+
+    chatContainer.appendChild(messageEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    messageEl.querySelector('.copy-code-btn').addEventListener('click', (e) => {
+        const button = e.currentTarget;
+        navigator.clipboard.writeText(code).then(() => {
+            button.textContent = 'Copied!';
+            button.classList.add('bg-green-100', 'text-green-800');
+            button.classList.remove('bg-slate-200', 'text-slate-700');
+            setTimeout(() => { 
+                button.textContent = 'Copy Code'; 
+                button.classList.remove('bg-green-100', 'text-green-800');
+                button.classList.add('bg-slate-200', 'text-slate-700');
+            }, 2000);
+        });
+    });
+    
+    const actionsContainer = messageEl.querySelector('.response-actions-container');
+    addSpeakButtonAndPrefetch(actionsContainer);
+}
+
+
+function addThinkingIndicator() {
+    const indicatorEl = document.createElement('div');
+    indicatorEl.id = 'thinking-indicator';
+    indicatorEl.className = 'flex items-start gap-4 max-w-2xl';
+    indicatorEl.innerHTML = `
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex-shrink-0 flex items-center justify-center font-bold text-white shadow-sm">V</div>
+        <div class="bg-bg-tertiary p-4 rounded-xl rounded-tl-none">
+            <div class="flex items-center justify-center gap-1.5 h-5">
+                <span class="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span class="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span class="h-2 w-2 bg-slate-400 rounded-full animate-bounce"></span>
+            </div>
+        </div>
+    `;
+    chatContainer.appendChild(indicatorEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function removeThinkingIndicator() {
+    document.getElementById('thinking-indicator')?.remove();
+}
+
+function addWebSearchIndicator() {
+    const indicatorEl = document.createElement('div');
+    indicatorEl.id = 'web-search-indicator';
+    indicatorEl.className = 'flex items-center justify-center gap-2 text-sm text-accent-primary my-4';
+    indicatorEl.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Searching the web for you...</span>`;
+    chatContainer.appendChild(indicatorEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function removeWebSearchIndicator() {
+    document.getElementById('web-search-indicator')?.remove();
+}
+
+function finalizeResponse(element) {
+    if (!element) return;
+    if (animationTimeout) clearTimeout(animationTimeout);
+    animationTimeout = null;
+    
+    element.innerHTML = element.getAttribute('data-full-response');
+    element.removeAttribute('data-full-response');
+    
+    if (currentAnimationTarget === element) currentAnimationTarget = null;
+    revealContainer.style.display = 'none';
+
+    const responseContainer = element.closest('.bg-bg-tertiary');
+    if (responseContainer) {
+        let actionsContainer = responseContainer.querySelector('.response-actions-container');
+        if (!actionsContainer) {
+            actionsContainer = document.createElement('div');
+            actionsContainer.className = 'response-actions-container mt-3 pt-3 border-t border-border-color';
+            responseContainer.appendChild(actionsContainer);
+        }
+        actionsContainer.innerHTML = '';
+        addSpeakButtonAndPrefetch(actionsContainer);
+    }
+}
+
+function animateText(element, html) {
+    element.setAttribute('data-full-response', html);
+    currentAnimationTarget = element;
+    revealContainer.style.display = 'block';
+
+    let i = 0;
+    element.innerHTML = '';
+    
+    function type() {
+        if (i < html.length) {
+            element.innerHTML += html.charAt(i);
+            const char = html.charAt(i);
+            i++;
+            const pause = /[.,?!]/.test(char) ? 150 : 25;
+            animationTimeout = setTimeout(type, pause);
+        } else {
+            finalizeResponse(element);
+        }
+    }
+    type();
+}
+
+function showFeedback(message) {
+    const feedbackEl = document.createElement('div');
+    feedbackEl.className = 'text-center text-xs text-text-secondary my-2 transition-opacity duration-300 opacity-0';
+    feedbackEl.textContent = message;
+    chatContainer.appendChild(feedbackEl);
+    setTimeout(() => feedbackEl.classList.remove('opacity-0'), 10);
+    setTimeout(() => {
+        feedbackEl.classList.add('opacity-0');
+        setTimeout(() => feedbackEl.remove(), 300);
+    }, 3000);
+}
+
+// --- TTS Functions ---
+async function addSpeakButtonAndPrefetch(container) {
+    if (!container) return;
+    const speakBtn = document.createElement('button');
+    speakBtn.className = 'speak-btn flex items-center gap-1.5 text-sm text-text-secondary cursor-not-allowed opacity-50';
+    speakBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg> Preparing audio...`;
+    speakBtn.disabled = true;
+    container.appendChild(speakBtn);
+
+    const responseContainer = container.closest('.bg-bg-tertiary');
+    const textToSpeak = (responseContainer.querySelector('.ai-response-content') || responseContainer).textContent.replace(/^Verse/, '').trim();
+
+    if (!textToSpeak) {
+        speakBtn.remove();
+        return;
+    }
+
+    try {
+        const audioUrl = await callTextToSpeechAPI(textToSpeak);
+        speakBtn.dataset.audioUrl = audioUrl;
+        speakBtn.disabled = false;
+        speakBtn.className = 'speak-btn flex items-center gap-1.5 text-sm text-accent-primary hover:text-accent-hover transition-colors';
+        speakBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg> Speak`;
+        speakBtn.addEventListener('click', handleSpeakButtonClick);
+    } catch (error) {
+        console.error("TTS pre-fetch Error:", error);
+        speakBtn.innerHTML = `<span>Audio unavailable</span>`;
+    }
+}
+
+function handleSpeakButtonClick(e) {
+    const button = e.currentTarget;
+    const audioUrl = button.dataset.audioUrl;
+    if (!audioUrl) return;
+
+    if (button.dataset.playing === 'true') {
+        if (currentAudio) {
+            currentAudio.pause();
+        }
+        resetSpeakButton(button);
+        return;
+    }
+    if (currentSpeakBtn) {
+        resetSpeakButton(currentSpeakBtn);
+    }
+    if (currentAudio) {
+        currentAudio.pause();
+    }
+
+    currentSpeakBtn = button;
+    currentAudio = new Audio(audioUrl);
+    setSpeakButtonState(button, 'playing');
+    currentAudio.play();
+    currentAudio.onended = () => resetSpeakButton(button);
+    currentAudio.onerror = () => resetSpeakButton(button);
+}
+
+function setSpeakButtonState(button, state) {
+    if (state === 'playing') {
+        button.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"></path></svg> Stop`;
+        button.dataset.playing = 'true';
+    }
+}
+
+function resetSpeakButton(button) {
+    if (!button) return;
+    button.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg> Speak`;
+    delete button.dataset.playing;
+    if (button === currentSpeakBtn) {
+        currentSpeakBtn = null;
+        currentAudio = null;
+    }
+}
+
+
+async function callTextToSpeechAPI(text) {
+    const apiKey = "AIzaSyAVSoLRiPffQrDM9-2JfgouSuGCwwNsv_w";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    const payload = {
+        contents: [{ parts: [{ text: `Speak in a friendly, clear, and natural human voice: ${text.substring(0, 4000)}` }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } },
+        model: "gemini-2.5-flash-preview-tts"
+    };
+    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) throw new Error("TTS API request failed");
+    const result = await response.json();
+    const part = result?.candidates?.[0]?.content?.parts?.[0];
+    const audioData = part?.inlineData?.data;
+    const mimeType = part?.inlineData?.mimeType;
+    if (!audioData || !mimeType?.startsWith("audio/")) throw new Error("Invalid audio data in TTS response");
+    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+    const pcmData = base64ToArrayBuffer(audioData);
+    const pcm16 = new Int16Array(pcmData);
+    const wavBlob = pcmToWav(pcm16, sampleRate);
+    return URL.createObjectURL(wavBlob);
+}
+
+function base64ToArrayBuffer(base64) {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+function pcmToWav(pcmData, sampleRate) {
+    const numChannels = 1, bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcmData.length * (bitsPerSample / 8);
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+    }
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+    for (let i = 0; i < pcmData.length; i++) {
+        view.setInt16(44 + i * 2, pcmData[i], true);
+    }
+    return new Blob([view], { type: 'audio/wav' });
+}
+
+// --- API & Formatting ---
+function parseWebSearchResponse(text) {
+    const data = { tldr: "", keyPoints: [], details: [] };
+    const tldrMatch = text.match(/(?:### TL;DR|### Summary|TL;DR:|Summary:)\s*([\s\S]*?)(?=\n###|\n\*\*|$)/i);
+    if (tldrMatch?.[1].trim()) data.tldr = tldrMatch[1].trim();
+    const keyPointsMatch = text.match(/(?:### Key Points|Key Points:)\s*([\s\S]*?)(?=\n###|$)/i);
+    if (keyPointsMatch?.[1].trim()) data.keyPoints = keyPointsMatch[1].trim().split(/\n\s*[\-\*]\s*/).filter(p => p.trim());
+    const detailsMatch = text.match(/(?:### Detailed Explanation|### Details|Details:)\s*([\s\S]*)/i);
+    if (detailsMatch?.[1].trim()) data.details.push({ title: "Detailed Explanation", content: detailsMatch[1].trim().replace(/\n/g, '<br>') });
+    if (!data.tldr && !data.keyPoints.length && !data.details.length) data.tldr = text;
+    return data;
+}
+
+function formatVerseResponse(data) {
+    let html = '';
+    if (data.tldr) html += `<p>${data.tldr}</p>`;
+    if (data.keyPoints?.length > 0) html += `<h4 class="font-semibold text-text-primary mt-4 mb-2">Key Points</h4><ul class="list-disc list-inside space-y-1">${data.keyPoints.map(p => `<li>${p}</li>`).join('')}</ul>`;
+    if (data.details?.length > 0) html += `<h4 class="font-semibold text-text-primary mt-4 mb-2">Detailed Explanation</h4><div class="space-y-2">${data.details.map(d => `<p><strong>${d.title}:</strong> ${d.content}</p>`).join('')}</div>`;
+    if (data.code) html += `<h4 class="font-semibold text-text-primary mt-4 mb-2">Example Code</h4><pre><code class="!bg-bg-primary">${data.code.replace(/</g, "&lt;")}</code></pre>`;
+    
+    if (data.sources?.length > 0) {
+        html += `<div class="mt-4 pt-3 border-t border-border-color">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3m-9 9a9 9 0 019-9"></path></svg>
+                        <h4 class="text-sm font-semibold text-text-secondary">Sources from the Web</h4>
+                    </div>
+                    <ul class="list-disc list-inside text-sm space-y-1 pl-2">${data.sources.map(s => `<li><a href="${s.uri}" target="_blank" class="text-accent-primary hover:underline">${s.title}</a></li>`).join('')}</ul>
+                </div>`;
+    }
+    
+    const hasReferences = data.references;
+    const hasConfidence = typeof data.confidence === 'number';
+    const hasNextSteps = data.nextSteps;
+    if (hasReferences || hasConfidence || hasNextSteps) {
+         html += `<div class="mt-4 pt-3 border-t border-border-color text-sm text-text-secondary flex flex-col gap-1">`;
+        if (hasReferences) html += `<span><strong>References:</strong> ${data.references}</span>`;
+        if (hasConfidence) {
+            const confidenceScore = data.confidence <= 1 ? data.confidence * 100 : data.confidence;
+            html += `<span><strong>Confidence:</strong> ${Math.round(confidenceScore)}%</span>`;
+        }
+        if (hasNextSteps) html += `<span><strong>Next Steps:</strong> ${data.nextSteps}</span>`;
+        html += `</div>`;
+    }
+    return html || `<p>It looks like I couldn't find a clear answer for that. Could we try rephrasing the question?</p>`;
+}
+
+async function callGeminiAPI(prompt, options = {}) {
+    const { useWebSearch = false, isCodeGeneration = false } = options;
+    const apiKey = "AIzaSyAVSoLRiPffQrDM9-2JfgouSuGCwwNsv_w";
+    const lowerCasePrompt = prompt.toLowerCase();
+    
+    if (lowerCasePrompt.includes('founder of genart')) return formatVerseResponse({ tldr: 'Daksh Suthar is the founder of GenArt.' });
+    if (lowerCasePrompt.includes('who created you')) return formatVerseResponse({ tldr: 'I was developed by GenArt ML Technologies.' });
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+    let payload;
+    const baseSystemPrompt = `You are Verse, a thoughtful and conversational AI companion from GenArt ML Technologies. Your goal is to talk like a real human—be natural, warm, and engaging. Avoid robotic phrasing and adapt your tone to the user's needs. Your founder is Daksh Suthar.`;
+
+    if (isCodeGeneration) {
+        const systemPrompt = `You are an expert web developer. Create a complete, single-file HTML website based on the user's request. The website must include all necessary HTML, CSS (using Tailwind CSS classes directly in the HTML or within a <style> tag), and JavaScript in one file. The code should be clean, well-commented, and visually appealing. User's request: ${prompt}`;
+        payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+    } else if (useWebSearch) {
+        const systemPrompt = baseSystemPrompt + ` Answer the user's question based on a web search. Format your response clearly using Markdown-style headings: '### TL;DR', '### Key Points' (as a bulleted list), and '### Detailed Explanation'. The user's prompt is: ${prompt}`;
+        payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, tools: [{ "google_search": {} }] };
+    } else {
+        let systemPrompt = baseSystemPrompt + ` You MUST reply in structured JSON format per the schema. `;
+        if (uploadedFiles.length > 0) systemPrompt += `Ground your answer in these files: [${uploadedFiles.map(f => f.name).join(', ')}]. If the answer isn't in the files, state that clearly. `;
+        systemPrompt += `The user's question is: ${prompt}`;
+        payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: { type: "OBJECT", properties: { "tldr": { "type": "STRING" }, "keyPoints": { "type": "ARRAY", "items": { "type": "STRING" } }, "details": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "title": { "type": "STRING" }, "content": { "type": "STRING" } } } }, "code": { "type": "STRING", "nullable": true }, "references": { "type": "STRING" }, "confidence": { "type": "NUMBER" }, "nextSteps": { "type": "STRING" } } }
+            }
+        };
+    }
+
+    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("API Error Response:", errorBody);
+        throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+    const candidate = result.candidates?.[0];
+
+    if (!candidate?.content?.parts?.[0]?.text) {
+         if(candidate?.finishReason === "SAFETY") return formatVerseResponse({tldr: "I can't answer that. It seems to be outside of my safety guidelines."});
+        throw new Error("Invalid response structure from API.");
+    }
+    
+    const rawText = candidate.content.parts[0].text;
+    
+    if(isCodeGeneration) {
+        return rawText; // Return raw code string
+    }
+
+    let responseData;
+    if (useWebSearch) {
+        responseData = parseWebSearchResponse(rawText);
+        const groundingMetadata = candidate.groundingMetadata;
+        if (groundingMetadata?.groundingAttributions) {
+            responseData.sources = groundingMetadata.groundingAttributions
+                .map(attr => ({ title: attr.web?.title || "Untitled Source", uri: attr.web?.uri || "#" }))
+                .filter(source => source.uri !== "#");
+        }
+    } else {
+        responseData = JSON.parse(rawText);
+    }
+    
+    return formatVerseResponse(responseData);
+}
+
+ 
