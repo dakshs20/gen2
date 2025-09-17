@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenArt for Teams & Agencies - Collaborative AI Workflow</title>
+    <meta name="description" content="Elevate your agency's creative output with GenArt for Teams. Enjoy collaborative workspaces, brand asset management, and powerful AI tools designed for professional workflows.">
+    <link rel="canonical" href="https://www.genartml.com/teams" />
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Animations for the Teams page */
+        .observe-me {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .observe-me.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .variation-image {
+            transition: transform 0.3s ease-in-out;
+        }
+        .variation-image:hover {
+            transform: scale(1.05) rotate(2deg);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom Cursor -->
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-screen">
+        
+        <header class="relative flex justify-between items-center py-5 px-2 fade-in-slide-up z-20">
+            <a href="index.html">
+                 <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-6 w-auto">
+            </a>
+            <div id="header-auth-section" class="hidden md:flex items-center space-x-6">
+                <a href="teams.html" class="text-sm font-medium text-gray-900">Teams</a>
+                <a href="pricing.html" class="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">Pricing</a>
+                <div id="generation-counter" class="text-sm font-medium text-gray-500"></div>
+                <button id="auth-btn" class="text-sm font-medium border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all duration-300">
+                    Sign In
+                </button>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-btn" class="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50 border">
+                <div class="p-2">
+                    <a href="teams.html" class="block w-full text-left text-sm font-medium text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors">Teams</a>
+                    <a href="pricing.html" class="block w-full text-left text-sm font-medium text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors">Pricing</a>
+                    <div class="border-t my-1"></div>
+                    <div id="mobile-generation-counter" class="text-sm text-center font-medium text-gray-600 px-2 py-2"></div>
+                    <button id="mobile-auth-btn" class="w-full text-left text-sm font-medium text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors">
+                        Sign In
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <!-- Hero Section -->
+            <section class="text-center py-20 md:py-32">
+                <div class="observe-me">
+                    <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-4">Supercharge Your<br>Creative Workflow</h1>
+                    <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-8">GenArt for Teams provides the collaborative tools and powerful AI your agency needs to create stunning visuals, faster than ever.</p>
+                    <a href="generator-teams.html" class="bg-gray-800 text-white font-semibold py-3 px-8 rounded-lg hover:bg-black transition-transform duration-300 inline-block transform hover:scale-105">Launch Team Generator</a>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="py-20 bg-gray-50 rounded-2xl">
+                <div class="max-w-6xl mx-auto px-4">
+                    <div class="text-center mb-16 observe-me">
+                        <h2 class="text-3xl md:text-4xl font-semibold text-gray-800">Built for Modern Agencies & Teams</h2>
+                        <p class="text-lg text-gray-500 mt-2">Everything you need to collaborate, create, and maintain brand consistency.</p>
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <!-- Feature Card 1 -->
+                        <div class="bg-white p-8 rounded-xl border border-gray-200/80 shadow-md transition-all duration-300 feature-card observe-me">
+                            <div class="bg-blue-100 text-blue-600 rounded-lg w-12 h-12 flex items-center justify-center mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">Collaborative Workspace</h3>
+                            <p class="text-gray-500">Shared projects, asset libraries, and real-time feedback loops to keep your team in sync.</p>
+                        </div>
+                        <!-- Feature Card 2 -->
+                        <div class="bg-white p-8 rounded-xl border border-gray-200/80 shadow-md transition-all duration-300 feature-card observe-me" style="transition-delay: 100ms;">
+                            <div class="bg-green-100 text-green-600 rounded-lg w-12 h-12 flex items-center justify-center mb-4">
+                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">Centralized Brand Assets</h3>
+                            <p class="text-gray-500">Maintain brand consistency with shared color palettes, logos, and custom-trained AI models.</p>
+                        </div>
+                        <!-- Feature Card 3 -->
+                        <div class="bg-white p-8 rounded-xl border border-gray-200/80 shadow-md transition-all duration-300 feature-card observe-me" style="transition-delay: 200ms;">
+                           <div class="bg-purple-100 text-purple-600 rounded-lg w-12 h-12 flex items-center justify-center mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                           </div>
+                           <h3 class="text-xl font-semibold text-gray-800 mb-2">Admin & Security</h3>
+                           <p class="text-gray-500">Manage team members, allocate credits, and ensure your creative assets are secure.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Generate Variations Section -->
+            <section class="py-20">
+                 <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-16 items-center">
+                    <div class="observe-me">
+                        <h2 class="text-3xl md:text-4xl font-semibold text-gray-800 mb-4">Explore and Iterate Faster</h2>
+                        <p class="text-lg text-gray-500 mb-6">Why settle for one? Generate multiple high-quality variations from a single prompt. Perfect for A/B testing, client presentations, and exploring creative directions in record time.</p>
+                        <ul class="space-y-2 text-gray-600">
+                           <li class="flex items-center"><svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Boost creativity with diverse options.</li>
+                           <li class="flex items-center"><svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Accelerate concept development.</li>
+                           <li class="flex items-center"><svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Deliver more choices to your clients.</li>
+                        </ul>
+                    </div>
+                     <div class="grid grid-cols-2 gap-4 observe-me" style="transition-delay: 150ms;">
+                        <img src="https://iili.io/FiiqmhB.md.png" alt="Image variation 1" class="rounded-lg shadow-lg variation-image">
+                        <img src="https://iili.io/FiiC8VS.md.png" alt="Image variation 2" class="rounded-lg shadow-lg variation-image mt-4">
+                        <img src="https://iili.io/FiizC0P.md.png" alt="Image variation 3" class="rounded-lg shadow-lg variation-image">
+                        <img src="https://iili.io/FiiT4UP.md.png" alt="Image variation 4" class="rounded-lg shadow-lg variation-image mt-4">
+                     </div>
+                 </div>
+            </section>
+
+            <!-- Connect Your Drive Section -->
+            <section class="py-20 bg-gray-900 text-white rounded-2xl">
+                 <div class="max-w-4xl mx-auto px-4 text-center observe-me">
+                     <h2 class="text-3xl md:text-4xl font-semibold mb-4">Sync With Your Favorite Tools</h2>
+                     <p class="text-lg text-gray-300 mb-12">Connect GenArt to your existing cloud storage and workflow tools for a seamless creative process. Keep all your assets organized and accessible.</p>
+                     <div class="flex justify-center items-center space-x-8 md:space-x-12">
+                         <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" class="h-16 transition-transform hover:scale-110">
+                         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Dropbox_Icon.svg/2202px-Dropbox_Icon.svg.png" alt="Dropbox" class="h-14 transition-transform hover:scale-110">
+                         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/2048px-Slack_icon_2019.svg.png" alt="Slack" class="h-12 transition-transform hover:scale-110">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Figma-logo.svg/1667px-Figma-logo.svg.png" alt="Figma" class="h-16 transition-transform hover:scale-110">
+                     </div>
+                 </div>
+            </section>
+
+             <!-- CTA Section -->
+            <section id="contact" class="py-20 my-16">
+                 <div class="text-center max-w-2xl mx-auto observe-me">
+                    <h2 class="text-3xl md:text-4xl font-semibold text-gray-800">Ready to Transform Your Team's Creativity?</h2>
+                    <p class="text-lg text-gray-500 mt-4 mb-8">Launch the dedicated team generator and experience a workflow designed for professional collaboration and creativity.</p>
+                    <a href="generator-teams.html" class="bg-blue-500 text-white font-semibold py-3 px-8 rounded-lg hover:bg-blue-600 transition-transform duration-300 inline-block transform hover:scale-105">Try Now</a>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center py-8 mt-auto border-t border-gray-200">
+            <p class="text-xs text-gray-500">&copy; 2025 GenArt. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <script type="module" src="teams.js"></script>
+</body>
+</html>
+
