@@ -493,3 +493,4 @@ function initializeCursor() {
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
     });
 }
+
