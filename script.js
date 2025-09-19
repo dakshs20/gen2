@@ -65,6 +65,9 @@ const NAVRATRI_DRESSES = {
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Helper to convert kebab-case IDs to camelCase for property access
+    const camelCase = str => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
+
     // Cache all DOM elements once to avoid repeated lookups
     const ids = [
         'mobile-menu-btn', 'mobile-menu', 'auth-btn', 'mobile-auth-btn', 'auth-modal',
@@ -81,7 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'tryon-loading-indicator', 'tryon-progress-bar', 'tryon-timer', 'tryon-result-image',
         'tryon-start-new-btn', 'tryon-back-btn'
     ];
-    ids.forEach(id => DOMElements[id] = document.getElementById(id));
+    
+    // FIX: Populate DOMElements with camelCase keys
+    ids.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            DOMElements[camelCase(id)] = element;
+        }
+    });
     
     DOMElements.cursorDot = document.querySelector('.cursor-dot');
     DOMElements.cursorOutline = document.querySelector('.cursor-outline');
@@ -99,7 +109,7 @@ function initializeEventListeners() {
     if (DOMElements.mobileMenuBtn) DOMElements.mobileMenuBtn.addEventListener('click', () => DOMElements.mobileMenu.classList.toggle('hidden'));
     
     [DOMElements.authBtn, DOMElements.mobileAuthBtn].forEach(btn => btn?.addEventListener('click', handleAuthAction));
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+    DOMElements.googleSigninBtn?.addEventListener('click', signInWithGoogle);
     DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
     
     DOMElements.closeCreditsModalBtn?.addEventListener('click', () => toggleModal(DOMElements.outOfCreditsModal, false));
@@ -213,7 +223,7 @@ function updateCreditDisplay() {
 }
 
 function resetToGeneratorView() {
-    DOMElements.generatorUI.classList.remove('hidden');
+    DOMElements.generatorUi.classList.remove('hidden');
     DOMElements.resultContainer.classList.add('hidden');
     DOMElements.imageGrid.innerHTML = '';
     DOMElements.messageBox.innerHTML = '';
@@ -327,9 +337,9 @@ async function generateImage(prompt, isRegenerate) {
 
 function showTryOnStep(stepNumber) {
     [1, 2, 3, 4].forEach(n => {
-        DOMElements[`tryon-step-${n}`].classList.add('hidden');
+        DOMElements[`tryonStep${n}`].classList.add('hidden');
     });
-    DOMElements[`tryon-step-${stepNumber}`].classList.remove('hidden');
+    DOMElements[`tryonStep${stepNumber}`].classList.remove('hidden');
 }
 
 function resetTryOnFlow() {
@@ -446,7 +456,8 @@ async function handleTryOnGeneration() {
         
         const imageUrl = `data:image/png;base64,${base64Data}`;
         DOMElements.tryonLoadingIndicator.classList.add('hidden');
-        DOMElements.tryonresultimage.innerHTML = `<img src="${imageUrl}" alt="Virtual try-on result" class="mx-auto rounded-lg shadow-lg max-h-[60vh] w-auto">`;
+        // FIX: Correct property access from tryonresultimage to tryonResultImage
+        DOMElements.tryonResultImage.innerHTML = `<img src="${imageUrl}" alt="Virtual try-on result" class="mx-auto rounded-lg shadow-lg max-h-[60vh] w-auto">`;
 
     } catch (error) {
         console.error('Try-on generation failed:', error);
@@ -469,14 +480,14 @@ function startLoadingUI(isRegenerate) {
     } else {
         DOMElements.resultContainer.classList.remove('hidden');
         DOMElements.loadingIndicator.classList.remove('hidden');
-        DOMElements.generatorUI.classList.add('hidden');
+        DOMElements.generatorUi.classList.add('hidden');
     }
-    startTimer();
+    timerInterval = startTimer();
 }
 
 function stopLoadingUI() {
     isGenerating = false;
-    stopTimer();
+    stopTimer(timerInterval);
     DOMElements.loadingIndicator.classList.add('hidden');
     DOMElements.regeneratePromptInput.value = lastPrompt;
     DOMElements.postGenerationControls.classList.remove('hidden');
@@ -574,10 +585,10 @@ function toggleMusic() {
     isPlaying ? DOMElements.lofiMusic.play().catch(e => console.error("Audio failed:", e)) : DOMElements.lofiMusic.pause();
 }
 
-function startTimer(el = 'timer', bar = 'progress-bar', max = 17) {
+function startTimer(elId = 'timer', barId = 'progressBar', max = 17) {
     let startTime = Date.now();
-    const timerEl = DOMElements[el];
-    const progressBar = DOMElements[bar];
+    const timerEl = DOMElements[elId];
+    const progressBar = DOMElements[barId];
     const maxTime = max * 1000;
     if (progressBar) progressBar.style.width = '0%';
     return setInterval(() => {
@@ -588,13 +599,13 @@ function startTimer(el = 'timer', bar = 'progress-bar', max = 17) {
     }, 100);
 }
 
-function stopTimer(interval, bar = 'progress-bar') {
+function stopTimer(interval, barId = 'progressBar') {
     clearInterval(interval);
-    if (DOMElements[bar]) DOMElements[bar].style.width = '100%';
+    if (DOMElements[barId]) DOMElements[barId].style.width = '100%';
 }
 
-function startTryOnTimer() { tryOnState.timerInterval = startTimer('tryon-timer', 'tryon-progress-bar', 30); }
-function stopTryOnTimer() { stopTimer(tryOnState.timerInterval, 'tryon-progress-bar'); }
+function startTryOnTimer() { tryOnState.timerInterval = startTimer('tryonTimer', 'tryonProgressBar', 30); }
+function stopTryOnTimer() { stopTimer(tryOnState.timerInterval, 'tryonProgressBar'); }
 
 function handlePromoTryNow() {
     DOMElements.promptInput.value = "Transform me into a 1920s vintage glamour portrait, black-and-white, soft shadows, art deco background, ultra-realistic cinematic lighting.";
@@ -604,11 +615,21 @@ function handlePromoTryNow() {
 
 function initializeCursor() {
     if (!DOMElements.cursorDot) return;
-    let mouseX = 0, mouseY = 0;
+    let mouseX = 0, mouseY = 0, outlineX = 0, outlineY = 0;
     window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
     const animate = () => {
-        DOMElements.cursorDot.style.left = `${mouseX}px`;
-        DOMElements.cursorDot.style.top = `${mouseY}px`;
+        let dot = DOMElements.cursorDot;
+        let outline = DOMElements.cursorOutline;
+        if (dot) {
+            dot.style.left = `${mouseX}px`;
+            dot.style.top = `${mouseY}px`;
+        }
+        if (outline) {
+            const ease = 0.15;
+            outlineX += (mouseX - outlineX) * ease;
+            outlineY += (mouseY - outlineY) * ease;
+            outline.style.transform = `translate(calc(${outlineX}px - 50%), calc(${outlineY}px - 50%))`;
+        }
         requestAnimationFrame(animate);
     };
     requestAnimationFrame(animate);
@@ -617,3 +638,4 @@ function initializeCursor() {
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
     });
 }
+
