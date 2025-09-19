@@ -7,8 +7,8 @@ const firebaseConfig = {
     authDomain: "genart-a693a.firebaseapp.com",
     projectId: "genart-a693a",
     storageBucket: "genart-a693a.appspot.com",
-    messagingSenderId: "969586715",
-    appId: "1:969586715:web:6a0d3aa6bf42c6bda17aca",
+    messagingSenderId: "96958671615",
+    appId: "1:96958671615:web:6a0d3aa6bf42c6bda17aca",
     measurementId: "G-EDCW8VYXY6"
 };
 
@@ -535,3 +535,4 @@ function initializeCursor() {
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
     });
 }
+
