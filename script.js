@@ -182,7 +182,7 @@ async function updateUIForAuthState(user) {
         DOMElements.authBtn.textContent = 'Sign Out';
         DOMElements.mobileAuthBtn.textContent = 'Sign Out';
         try {
-            const token = await user.getIdToken();
+            const token = await user.getIdToken(true); // Changed this line to force a token refresh
             const response = await fetch('/api/credits', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -535,4 +535,5 @@ function initializeCursor() {
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
     });
 }
+
 
