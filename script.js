@@ -16,6 +16,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// --- Global Helper Function ---
+// Helper to convert kebab-case IDs to camelCase for property access
+const camelCase = str => str ? str.replace(/-([a-z])/g, g => g[1].toUpperCase()) : '';
+
 // --- Global State ---
 let currentUserCredits = 0;
 let lastPrompt = '';
@@ -65,9 +69,6 @@ const NAVRATRI_DRESSES = {
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Helper to convert kebab-case IDs to camelCase for property access
-    const camelCase = str => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
-
     // Cache all DOM elements once to avoid repeated lookups
     const ids = [
         'mobile-menu-btn', 'mobile-menu', 'auth-btn', 'mobile-auth-btn', 'auth-modal',
@@ -358,6 +359,17 @@ function resetTryOnFlow() {
     if (DOMElements.tryonImageUploadInput) DOMElements.tryonImageUploadInput.value = '';
     if (DOMElements.dressGallery) DOMElements.dressGallery.innerHTML = '';
     if (DOMElements.tryonGenerateBtn) DOMElements.tryonGenerateBtn.disabled = true;
+    if (DOMElements.tryonResultImage) DOMElements.tryonResultImage.innerHTML = '';
+    if (DOMElements.tryonLoadingIndicator) {
+        DOMElements.tryonLoadingIndicator.classList.remove('hidden');
+        DOMElements.tryonLoadingIndicator.innerHTML = `
+            <p class="font-medium text-gray-700 mb-3">Dressing you up with AI...</p>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="tryon-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="tryon-timer" class="text-sm text-gray-500 mt-3">Getting ready...</p>
+        `;
+    }
     showTryOnStep(1);
 }
 
@@ -498,7 +510,7 @@ function startLoadingUI(isRegenerate) {
 
 function stopLoadingUI() {
     isGenerating = false;
-    stopTimer(timerInterval);
+    stopTimer(timerInterval, 'progressBar');
     if (DOMElements.loadingIndicator) DOMElements.loadingIndicator.classList.add('hidden');
     if (DOMElements.regeneratePromptInput) DOMElements.regeneratePromptInput.value = lastPrompt;
     if (DOMElements.postGenerationControls) DOMElements.postGenerationControls.classList.remove('hidden');
@@ -598,7 +610,7 @@ function toggleMusic() {
     isPlaying ? DOMElements.lofiMusic.play().catch(e => console.error("Audio failed:", e)) : DOMElements.lofiMusic.pause();
 }
 
-function startTimer(elId = 'timer', barId = 'tryonProgressBar', max = 17) {
+function startTimer(elId = 'timer', barId = 'progressBar', max = 17) {
     let startTime = Date.now();
     const camelElId = camelCase(elId);
     const camelBarId = camelCase(barId);
@@ -614,7 +626,7 @@ function startTimer(elId = 'timer', barId = 'tryonProgressBar', max = 17) {
     }, 100);
 }
 
-function stopTimer(interval, barId = 'tryonProgressBar') {
+function stopTimer(interval, barId = 'progressBar') {
     clearInterval(interval);
     const camelBarId = camelCase(barId);
     if (DOMElements[camelBarId]) DOMElements[camelBarId].style.width = '100%';
