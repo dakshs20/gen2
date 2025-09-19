@@ -42,10 +42,10 @@ export default async function handler(req, res) {
         }
         const user = await auth().verifyIdToken(idToken);
 
-        // --- UPDATED: Destructure new potential image fields ---
-        const { prompt, imageData, userImage, dressImage, aspectRatio } = req.body;
+        const { prompt, imageData, aspectRatio, isTryOn, personImageData, garmentImageData } = req.body;
+        
+        // Log the generation attempt
         await logGeneration(user.uid, prompt);
-
 
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
@@ -54,22 +54,21 @@ export default async function handler(req, res) {
 
         let apiUrl, payload;
 
-        // --- NEW: VIRTUAL TRY-ON LOGIC ---
-        // This block handles requests that include a user's photo and a dress photo.
-        if (userImage && userImage.data && dressImage && dressImage.data) {
+        // --- NEW: Virtual Try-On Logic ---
+        if (isTryOn && personImageData && garmentImageData) {
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
             payload = {
                 "contents": [{ 
                     "parts": [
                         { "text": prompt }, 
-                        { "inlineData": { "mimeType": userImage.mimeType, "data": userImage.data } },
-                        { "inlineData": { "mimeType": dressImage.mimeType, "data": dressImage.data } }
+                        { "inlineData": personImageData },
+                        { "inlineData": garmentImageData }
                     ] 
                 }],
                 "generationConfig": { "responseModalities": ["IMAGE"] }
             };
         } else if (imageData && imageData.data) {
-             // --- EXISTING: Image-to-Image Edit Logic ---
+            // --- Existing Image-to-Image Logic ---
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
             payload = {
                 "contents": [{ 
@@ -81,7 +80,7 @@ export default async function handler(req, res) {
                 "generationConfig": { "responseModalities": ["IMAGE"] }
             };
         } else {
-            // --- EXISTING: Text-to-Image Logic ---
+            // --- Existing Text-to-Image Logic ---
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
             payload = { 
                 instances: [{ prompt }], 
