@@ -24,20 +24,39 @@ let uploadedImageData = null;
 let isGenerating = false;
 let timerInterval;
 
-// --- NEW: Virtual Try-On (VTO) State ---
-let vtoUserImage = null;
+// --- Navratri Try-On State ---
+let tryOnState = {
+    personImage: null,
+    garmentImage: null,
+    isGenerating: false,
+    timerInterval: null
+};
+
+// --- Dress Data ---
 const NAVRATRI_DRESSES = {
     female: [
-        { name: "Classic Red", url: "https://i.pinimg.com/originals/9a/2d/34/9a2d342f025413a96f1d2b77a0c8b9d2.png" },
-        { name: "Elegant Blue", url: "https://www.sareesbazaar.com/images/products/medium/SB-DRS13035.jpg" },
-        { name: "Vibrant Yellow", url: "https://assets.panashindia.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/3/3/332lg11-lg.jpg" },
-        { name: "Peacock Green", url: "https://i.pinimg.com/originals/af/7d/f1/af7df11b71d62c1143a29b8214f47b2c.jpg" }
+        'https://i.ibb.co/6yqM58p/lehenga1.png',
+        'https://i.ibb.co/Fqsj1Gg/lehenga2.png',
+        'https://i.ibb.co/BPDqGjn/lehenga3.png',
+        'https://i.ibb.co/3zd7Jq0/lehenga4.png',
+        'https://i.ibb.co/k2qZDTq/lehenga5.png',
+        'https://i.ibb.co/wJscf4L/lehenga6.png',
+        'https://i.ibb.co/pZ4jjV2/lehenga7.png',
+        'https://i.ibb.co/M7S28Bf/lehenga8.png',
+        'https://i.ibb.co/M2mwG3Q/lehenga9.png',
+        'https://i.ibb.co/j3YkYmg/lehenga10.png'
     ],
     male: [
-        { name: "Blue Floral Kurta", url: "https://assets.myntassets.com/dpr_1.5,q_60,w_400,c_limit,fl_progressive/assets/images/22022838/2023/2/21/2b8a7f23-3e0e-4a65-a6e5-4a5c54a9c6801676974790890-SOJANYA-Men-Blue-Floral-Printed-Regular-Pure-Cotton-Kurta-w-1.jpg" },
-        { name: "Classic White Kurta", url: "https://images.meesho.com/images/products/106686153/b7k7r_512.jpg" },
-        { name: "Black Patterned Kurta", url: "https://rukminim1.flixcart.com/image/612/612/xif0q/kurta/c/p/k/m-vkurta-34-vida-loca-original-imagj489tqbgt4ze.jpeg?q=70" },
-        { name: "Embroidered Kurta", url: "https://cdn.shopify.com/s/files/1/0523/3433/4379/products/4_740d12e4-e057-4b71-ab58-8686a603c46e_700x.jpg?v=1678877508" }
+        'https://i.ibb.co/2Zk1P8f/kurta1.png',
+        'https://i.ibb.co/3fQCZ1p/kurta2.png',
+        'https://i.ibb.co/MhL2XwM/kurta3.png',
+        'https://i.ibb.co/bFzL1qF/kurta4.png',
+        'https://i.ibb.co/f46Ry31/kurta5.png',
+        'https://i.ibb.co/JCdQKSk/kurta6.png',
+        'https://i.ibb.co/2nLdbtG/kurta7.png',
+        'https://i.ibb.co/8Y4j7vK/kurta8.png',
+        'https://i.ibb.co/v4KdhvR/kurta9.png',
+        'https://i.ibb.co/vqm4qBv/kurta10.png'
     ]
 };
 
@@ -47,83 +66,31 @@ const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     // Cache all DOM elements once to avoid repeated lookups
-    const ids = ['mobile-menu-btn', 'mobile-menu', 'auth-btn', 'mobile-auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 'close-welcome-modal-btn', 'free-credits-amount', 'generation-counter', 'mobile-generation-counter', 'music-btn', 'lofi-music', 'generator-ui', 'result-container', 'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview', 'copy-prompt-btn', 'enhance-prompt-btn', 'prompt-suggestions', 'loading-indicator', 'image-grid', 'post-generation-controls', 'regenerate-prompt-input', 'regenerate-btn', 'message-box', 'promo-try-now-btn', 'prompt-container'];
+    const ids = [
+        'mobile-menu-btn', 'mobile-menu', 'auth-btn', 'mobile-auth-btn', 'auth-modal',
+        'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn',
+        'welcome-credits-modal', 'close-welcome-modal-btn', 'free-credits-amount',
+        'generation-counter', 'mobile-generation-counter', 'music-btn', 'lofi-music',
+        'generator-ui', 'result-container', 'prompt-input', 'generate-btn', 'image-upload-btn',
+        'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview',
+        'copy-prompt-btn', 'enhance-prompt-btn', 'prompt-suggestions', 'loading-indicator',
+        'image-grid', 'post-generation-controls', 'regenerate-prompt-input', 'regenerate-btn',
+        'message-box', 'promo-try-now-btn', 'navratri-tryon-btn', 'navratri-modal',
+        'close-navratri-modal-btn', 'tryon-step-1', 'tryon-image-upload-btn', 'tryon-image-upload-input',
+        'tryon-step-2', 'tryon-step-3', 'dress-gallery', 'tryon-generate-btn', 'tryon-step-4',
+        'tryon-loading-indicator', 'tryon-progress-bar', 'tryon-timer', 'tryon-result-image',
+        'tryon-start-new-btn', 'tryon-back-btn'
+    ];
     ids.forEach(id => DOMElements[id] = document.getElementById(id));
     
     DOMElements.cursorDot = document.querySelector('.cursor-dot');
     DOMElements.cursorOutline = document.querySelector('.cursor-outline');
     DOMElements.examplePrompts = document.querySelectorAll('.example-prompt');
     DOMElements.aspectRatioBtns = document.querySelectorAll('.aspect-ratio-btn');
-    
-    // --- NEW: Inject Navratri Try-On feature ---
-    injectVTOFeature();
+    DOMElements.genderBtns = document.querySelectorAll('.gender-btn');
+
     initializeEventListeners();
 });
-
-function injectVTOFeature() {
-    // 1. Inject Button
-    if (DOMElements.promptContainer) {
-        const navratriBtn = document.createElement('button');
-        navratriBtn.id = 'navratri-try-on-btn';
-        navratriBtn.className = 'prompt-suggestion-btn mt-2 mx-auto';
-        navratriBtn.innerHTML = `✨ Try Navratri Dresses`;
-        DOMElements.promptContainer.parentElement.appendChild(navratriBtn);
-        DOMElements.navratriTryOnBtn = navratriBtn;
-    }
-
-    // 2. Inject Modal HTML
-    const modalHTML = `
-        <div id="vto-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] transition-opacity duration-300 opacity-0 invisible">
-            <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full text-center fade-in-slide-up relative max-h-[90vh] overflow-y-auto">
-                <button id="vto-close-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">&times;</button>
-                
-                <!-- Step 1: Upload Photo -->
-                <div id="vto-step-1">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Virtual Try-On: Step 1</h2>
-                    <p class="text-gray-500 mb-6">Upload a clear, full-body photo of yourself.</p>
-                    <input type="file" id="vto-image-upload" class="hidden" accept="image/*">
-                    <label for="vto-image-upload" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 flex items-center justify-center space-x-2 cursor-pointer">
-                        <span>Upload Your Photo</span>
-                    </label>
-                </div>
-
-                <!-- Step 2: Select Gender -->
-                <div id="vto-step-2" class="hidden">
-                     <h2 class="text-2xl font-semibold text-gray-800 mb-2">Step 2: Choose a Style</h2>
-                    <p class="text-gray-500 mb-6">This will help us show you the right outfits.</p>
-                    <div class="flex gap-4 justify-center">
-                        <button id="vto-gender-male" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300">Male</button>
-                        <button id="vto-gender-female" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300">Female</button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Choose Dress -->
-                <div id="vto-step-3" class="hidden">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Step 3: Pick a Dress</h2>
-                    <p class="text-gray-500 mb-6">Select an outfit to try on. (Costs 1 Credit)</p>
-                    <div id="vto-dress-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-                </div>
-                
-                <!-- Step 4: Generate & Result -->
-                <div id="vto-step-4" class="hidden">
-                     <h2 class="text-2xl font-semibold text-gray-800 mb-2">Creating Your New Look...</h2>
-                    <p class="text-gray-500 mb-6">Please wait, this can take a moment.</p>
-                    <div id="vto-loader" class="flex justify-center items-center h-64">
-                         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
-                    </div>
-                    <div id="vto-result-container" class="hidden"></div>
-                    <button id="vto-start-over-btn" class="hidden mt-4 w-full bg-gray-800 text-white font-semibold py-3 rounded-lg hover:bg-black transition-colors">Start Over</button>
-                </div>
-
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    // 3. Cache new VTO elements
-    const vtoIds = ['vto-modal', 'vto-close-btn', 'vto-step-1', 'vto-step-2', 'vto-step-3', 'vto-step-4', 'vto-image-upload', 'vto-gender-male', 'vto-gender-female', 'vto-dress-grid', 'vto-loader', 'vto-result-container', 'vto-start-over-btn'];
-    vtoIds.forEach(id => DOMElements[id] = document.getElementById(id));
-}
 
 
 function initializeEventListeners() {
@@ -173,137 +140,21 @@ function initializeEventListeners() {
     DOMElements.copyPromptBtn?.addEventListener('click', copyPrompt);
     DOMElements.enhancePromptBtn?.addEventListener('click', handleEnhancePrompt);
 
-    // --- NEW: VTO Event Listeners ---
-    DOMElements.navratriTryOnBtn?.addEventListener('click', openVTOModal);
-    DOMElements.vtoCloseBtn?.addEventListener('click', () => toggleModal(DOMElements.vtoModal, false));
-    DOMElements.vtoImageUpload?.addEventListener('change', handleVTOImageUpload);
-    DOMElements.vtoGenderMale?.addEventListener('click', () => handleVTOGenderSelect('male'));
-    DOMElements.vtoGenderFemale?.addEventListener('click', () => handleVTOGenderSelect('female'));
-    DOMElements.vtoStartOverBtn?.addEventListener('click', openVTOModal);
+    // --- Navratri Try-On Event Listeners ---
+    DOMElements.navratriTryonBtn?.addEventListener('click', () => toggleModal(DOMElements.navratriModal, true));
+    DOMElements.closeNavratriModalBtn?.addEventListener('click', () => {
+        toggleModal(DOMElements.navratriModal, false);
+        resetTryOnFlow();
+    });
+    DOMElements.tryonImageUploadBtn?.addEventListener('click', () => DOMElements.tryonImageUploadInput.click());
+    DOMElements.tryonImageUploadInput?.addEventListener('change', handleTryOnImageUpload);
+    DOMElements.genderBtns?.forEach(btn => btn.addEventListener('click', handleGenderSelection));
+    DOMElements.tryonBackBtn?.addEventListener('click', () => showTryOnStep(2));
+    DOMElements.tryonGenerateBtn?.addEventListener('click', handleTryOnGeneration);
+    DOMElements.tryonStartNewBtn?.addEventListener('click', resetTryOnFlow);
 
 
     initializeCursor();
-}
-
-// --- NEW: VTO Modal Logic ---
-
-function openVTOModal() {
-    if (!auth.currentUser) {
-        toggleModal(DOMElements.authModal, true);
-        return;
-    }
-    if (currentUserCredits <= 0) {
-        toggleModal(DOMElements.outOfCreditsModal, true);
-        return;
-    }
-    vtoUserImage = null;
-    DOMElements.vtoImageUpload.value = '';
-    goToVTOStep(1);
-    toggleModal(DOMElements.vtoModal, true);
-}
-
-function goToVTOStep(stepNumber) {
-    [1, 2, 3, 4].forEach(n => DOMElements[`vto-step-${n}`].classList.add('hidden'));
-    DOMElements[`vto-step-${stepNumber}`].classList.remove('hidden');
-
-    if (stepNumber === 4) {
-        DOMElements.vtoLoader.classList.remove('hidden');
-        DOMElements.vtoResultContainer.classList.add('hidden');
-        DOMElements.vtoResultContainer.innerHTML = '';
-        DOMElements.vtoStartOverBtn.classList.add('hidden');
-    }
-}
-
-function handleVTOImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        vtoUserImage = { mimeType: file.type, data: reader.result.split(',')[1] };
-        goToVTOStep(2);
-    };
-    reader.readAsDataURL(file);
-}
-
-function handleVTOGenderSelect(gender) {
-    populateDressGrid(gender);
-    goToVTOStep(3);
-}
-
-function populateDressGrid(gender) {
-    DOMElements.vtoDressGrid.innerHTML = '';
-    const dresses = NAVRATRI_DRESSES[gender];
-    dresses.forEach(dress => {
-        const dressItem = document.createElement('div');
-        dressItem.className = 'cursor-pointer group border rounded-lg overflow-hidden hover:border-blue-500 transition-all';
-        dressItem.innerHTML = `
-            <img src="${dress.url}" alt="${dress.name}" class="w-full h-48 object-cover object-top">
-            <p class="p-2 text-sm font-medium text-gray-700 group-hover:text-blue-600">${dress.name}</p>
-        `;
-        dressItem.addEventListener('click', () => handleVTODressSelect(dress.url));
-        DOMElements.vtoDressGrid.appendChild(dressItem);
-    });
-}
-
-async function handleVTODressSelect(dressUrl) {
-    goToVTOStep(4);
-
-    try {
-        // Fetch and convert dress image to base64
-        const response = await fetch(dressUrl);
-        if (!response.ok) throw new Error('Could not load dress image.');
-        const blob = await response.blob();
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = async () => {
-            const dressImage = { mimeType: blob.type, data: reader.result.split(',')[1] };
-            
-            // Deduct credit
-            const token = await auth.currentUser.getIdToken();
-            const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-            if (!deductResponse.ok) {
-                 if (deductResponse.status === 402) toggleModal(DOMElements.outOfCreditsModal, true);
-                 throw new Error('Failed to deduct credit.');
-            }
-            const deductData = await deductResponse.json();
-            currentUserCredits = deductData.newCredits;
-            updateCreditDisplay();
-
-            // Generate image
-            const prompt = `Virtually try on the outfit. Place the clothing from the second image (the dress) onto the person in the first image. Keep the person's face, hair, and pose exactly the same. The final image should look realistic, seamless, and high-quality.`;
-            const generateResponse = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ prompt, userImage: vtoUserImage, dressImage })
-            });
-
-            if (!generateResponse.ok) throw new Error('Image generation failed.');
-
-            const result = await generateResponse.json();
-            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-            if (!base64Data) throw new Error("No image data received from API.");
-            
-            const imageUrl = `data:image/png;base64,${base64Data}`;
-            displayVTOResult(imageUrl);
-        };
-    } catch (error) {
-        console.error("VTO Error:", error);
-        displayVTOError(error.message);
-    }
-}
-
-function displayVTOResult(imageUrl) {
-    DOMElements.vtoLoader.classList.add('hidden');
-    DOMElements.vtoResultContainer.innerHTML = `<img src="${imageUrl}" alt="Virtual Try-On Result" class="rounded-lg max-w-full mx-auto max-h-[60vh]">`;
-    DOMElements.vtoResultContainer.classList.remove('hidden');
-    DOMElements.vtoStartOverBtn.classList.remove('hidden');
-}
-
-function displayVTOError(message) {
-     DOMElements.vtoLoader.classList.add('hidden');
-    DOMElements.vtoResultContainer.innerHTML = `<p class="text-red-500">${message}</p>`;
-    DOMElements.vtoResultContainer.classList.remove('hidden');
-    DOMElements.vtoStartOverBtn.classList.remove('hidden');
 }
 
 // --- UI & State Management ---
@@ -337,9 +188,7 @@ async function updateUIForAuthState(user) {
             updateCreditDisplay();
 
             if (data.isNewUser && data.credits > 0) {
-                if(DOMElements.freeCreditsAmount) {
-                    DOMElements.freeCreditsAmount.textContent = data.credits;
-                }
+                if(DOMElements.freeCreditsAmount) DOMElements.freeCreditsAmount.textContent = data.credits;
                 toggleModal(DOMElements.welcomeCreditsModal, true);
             }
 
@@ -359,8 +208,8 @@ async function updateUIForAuthState(user) {
 
 function updateCreditDisplay() {
     const text = auth.currentUser ? `Credits: ${currentUserCredits}` : 'Sign in to generate';
-    if(DOMElements.generationCounter) DOMElements.generationCounter.textContent = text;
-    if(DOMElements.mobileGenerationCounter) DOMElements.mobileGenerationCounter.textContent = text;
+    DOMElements.generationCounter.textContent = text;
+    DOMElements.mobileGenerationCounter.textContent = text;
 }
 
 function resetToGeneratorView() {
@@ -386,9 +235,7 @@ function handleAuthAction() {
 
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
-        .then(() => {
-            toggleModal(DOMElements.authModal, false)
-        })
+        .then(() => toggleModal(DOMElements.authModal, false))
         .catch(error => {
             console.error("Authentication Error:", error);
             showMessage('Failed to sign in. Please try again.', 'error');
@@ -433,11 +280,8 @@ async function generateImage(prompt, isRegenerate) {
         });
 
         if (!deductResponse.ok) {
-            if(deductResponse.status === 402) {
-                 toggleModal(DOMElements.outOfCreditsModal, true);
-            } else {
-                 throw new Error('Failed to deduct credit.');
-            }
+            if(deductResponse.status === 402) toggleModal(DOMElements.outOfCreditsModal, true);
+            else throw new Error('Failed to deduct credit.');
             stopLoadingUI();
             return;
         }
@@ -462,19 +306,13 @@ async function generateImage(prompt, isRegenerate) {
 
         const result = await generateResponse.json();
         
-        let base64Data;
-        if (uploadedImageData) {
-            base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-        } else {
-            base64Data = result.predictions?.[0]?.bytesBase64Encoded;
-        }
+        let base64Data = uploadedImageData 
+            ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data
+            : result.predictions?.[0]?.bytesBase64Encoded;
 
-        if (!base64Data) {
-            throw new Error("No image data received from API.");
-        }
-
-        const imageUrl = `data:image/png;base64,${base64Data}`;
-        displayImage(imageUrl, prompt);
+        if (!base64Data) throw new Error("No image data received from API.");
+        
+        displayImage(`data:image/png;base64,${base64Data}`, prompt);
 
     } catch (error) {
         console.error('Image generation failed:', error);
@@ -484,6 +322,141 @@ async function generateImage(prompt, isRegenerate) {
         stopLoadingUI();
     }
 }
+
+// --- Navratri Try-On Functions ---
+
+function showTryOnStep(stepNumber) {
+    [1, 2, 3, 4].forEach(n => {
+        DOMElements[`tryon-step-${n}`].classList.add('hidden');
+    });
+    DOMElements[`tryon-step-${stepNumber}`].classList.remove('hidden');
+}
+
+function resetTryOnFlow() {
+    tryOnState = { personImage: null, garmentImage: null, isGenerating: false, timerInterval: null };
+    DOMElements.tryonImageUploadInput.value = '';
+    DOMElements.dressGallery.innerHTML = '';
+    DOMElements.tryonGenerateBtn.disabled = true;
+    showTryOnStep(1);
+}
+
+function handleTryOnImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        tryOnState.personImage = { mimeType: file.type, data: reader.result.split(',')[1] };
+        showTryOnStep(2);
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleGenderSelection(event) {
+    const gender = event.currentTarget.dataset.gender;
+    populateDressGallery(gender);
+    showTryOnStep(3);
+}
+
+function populateDressGallery(gender) {
+    const dresses = NAVRATRI_DRESSES[gender] || [];
+    DOMElements.dressGallery.innerHTML = '';
+    dresses.forEach(src => {
+        const item = document.createElement('div');
+        item.className = 'dress-item';
+        item.innerHTML = `<img src="${src}" alt="Navratri Dress" loading="lazy">`;
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.dress-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            tryOnState.garmentImage = src;
+            DOMElements.tryonGenerateBtn.disabled = false;
+        });
+        DOMElements.dressGallery.appendChild(item);
+    });
+}
+
+async function handleTryOnGeneration() {
+    if (tryOnState.isGenerating || !tryOnState.personImage || !tryOnState.garmentImage) return;
+
+    if (!auth.currentUser) {
+        toggleModal(DOMElements.authModal, true);
+        return;
+    }
+
+    if (currentUserCredits <= 0) {
+        toggleModal(DOMElements.outOfCreditsModal, true);
+        return;
+    }
+
+    tryOnState.isGenerating = true;
+    showTryOnStep(4);
+    startTryOnTimer();
+
+    try {
+        // Fetch garment image and convert to base64
+        const garmentResponse = await fetch(tryOnState.garmentImage);
+        const garmentBlob = await garmentResponse.blob();
+        const garmentBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(garmentBlob);
+        });
+        const garmentImageData = { mimeType: garmentBlob.type, data: garmentBase64 };
+
+        const token = await auth.currentUser.getIdToken();
+        const deductResponse = await fetch('/api/credits', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!deductResponse.ok) {
+            throw new Error('Failed to deduct credit.');
+        }
+
+        const deductData = await deductResponse.json();
+        currentUserCredits = deductData.newCredits;
+        updateCreditDisplay();
+
+        const prompt = `Realistically place the clothing from the second image onto the person in the first image. The final image should only show the person wearing the new outfit in a natural pose, maintaining the original background and body proportions. Ensure the lighting and shadows on the clothing match the person's environment.`;
+        
+        const generateResponse = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                prompt,
+                isTryOn: true,
+                personImageData: tryOnState.personImage,
+                garmentImageData: garmentImageData
+            })
+        });
+
+        if (!generateResponse.ok) {
+            throw new Error(`API Error: ${generateResponse.statusText}`);
+        }
+
+        const result = await generateResponse.json();
+        const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+        if (!base64Data) {
+            throw new Error("No image data received from API.");
+        }
+        
+        const imageUrl = `data:image/png;base64,${base64Data}`;
+        DOMElements.tryonLoadingIndicator.classList.add('hidden');
+        DOMElements.tryonresultimage.innerHTML = `<img src="${imageUrl}" alt="Virtual try-on result" class="mx-auto rounded-lg shadow-lg max-h-[60vh] w-auto">`;
+
+    } catch (error) {
+        console.error('Try-on generation failed:', error);
+        DOMElements.tryonLoadingIndicator.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Please try again.</p>`;
+    } finally {
+        stopTryOnTimer();
+        tryOnState.isGenerating = false;
+    }
+}
+
 
 // --- UI Update Functions for Generation ---
 
@@ -513,9 +486,7 @@ function stopLoadingUI() {
 function dataURLtoBlob(dataurl) {
     let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
         bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
+    while(n--) u8arr[n] = bstr.charCodeAt(n);
     return new Blob([u8arr], {type:mime});
 }
 
@@ -535,17 +506,12 @@ function displayImage(imageUrl, prompt) {
 
     downloadButton.onclick = () => {
         try {
-            const blob = dataURLtoBlob(imageUrl);
-            const url = URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
-            a.href = url;
+            a.href = imageUrl;
             a.download = 'genart-image.png';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-
-            URL.revokeObjectURL(url);
         } catch (error) {
             console.error("Download failed:", error);
             showMessage("Could not download image. Please try saving it manually.", "error");
@@ -595,82 +561,57 @@ function removeUploadedImage() {
     DOMElements.promptInput.placeholder = "An oil painting of a futuristic city skyline at dusk...";
 }
 
-async function handleEnhancePrompt() {
-    showMessage("Prompt enhancement is coming soon!", "info");
-}
-
+async function handleEnhancePrompt() { showMessage("Prompt enhancement is coming soon!", "info"); }
 function copyPrompt() {
-    const promptText = DOMElements.promptInput.value;
-    if (!promptText) {
-        showMessage("There's nothing to copy.", "info");
-        return;
-    }
-    navigator.clipboard.writeText(promptText).then(() => {
-        showMessage("Prompt copied!", "info");
-    }).catch(() => {
-        showMessage("Failed to copy prompt.", "error");
-    });
+    if (!DOMElements.promptInput.value) return showMessage("There's nothing to copy.", "info");
+    navigator.clipboard.writeText(DOMElements.promptInput.value)
+        .then(() => showMessage("Prompt copied!", "info"))
+        .catch(() => showMessage("Failed to copy prompt.", "error"));
 }
-
 function toggleMusic() {
+    if (!DOMElements.musicBtn || !DOMElements.lofiMusic) return;
     const isPlaying = DOMElements.musicBtn.classList.toggle('playing');
-    if (isPlaying) {
-        DOMElements.lofiMusic.play().catch(error => console.error("Audio playback failed:", error));
-    } else {
-        DOMElements.lofiMusic.pause();
-    }
+    isPlaying ? DOMElements.lofiMusic.play().catch(e => console.error("Audio failed:", e)) : DOMElements.lofiMusic.pause();
 }
 
-function startTimer() {
+function startTimer(el = 'timer', bar = 'progress-bar', max = 17) {
     let startTime = Date.now();
-    const timerEl = document.getElementById('timer');
-    const progressBar = document.getElementById('progress-bar');
-    const maxTime = 17 * 1000;
+    const timerEl = DOMElements[el];
+    const progressBar = DOMElements[bar];
+    const maxTime = max * 1000;
     if (progressBar) progressBar.style.width = '0%';
-    timerInterval = setInterval(() => {
+    return setInterval(() => {
         const elapsedTime = Date.now() - startTime;
         const progress = Math.min(elapsedTime / maxTime, 1);
         if (progressBar) progressBar.style.width = `${progress * 100}%`;
-        if (timerEl) timerEl.textContent = `${(elapsedTime / 1000).toFixed(1)}s / ~17s`;
-        if (elapsedTime >= maxTime) {
-            if (timerEl) timerEl.textContent = `17.0s / ~17s`;
-        }
+        if (timerEl) timerEl.textContent = `${(elapsedTime / 1000).toFixed(1)}s / ~${max}s`;
     }, 100);
 }
 
-function stopTimer() {
-    clearInterval(timerInterval);
-    const progressBar = document.getElementById('progress-bar');
-    if (progressBar) progressBar.style.width = '100%';
+function stopTimer(interval, bar = 'progress-bar') {
+    clearInterval(interval);
+    if (DOMElements[bar]) DOMElements[bar].style.width = '100%';
 }
 
+function startTryOnTimer() { tryOnState.timerInterval = startTimer('tryon-timer', 'tryon-progress-bar', 30); }
+function stopTryOnTimer() { stopTimer(tryOnState.timerInterval, 'tryon-progress-bar'); }
+
 function handlePromoTryNow() {
-    const promptText = "Transform me into a 1920s vintage glamour portrait, black-and-white, soft shadows, art deco background, ultra-realistic cinematic lighting.";
-    DOMElements.promptInput.value = promptText;
-    
+    DOMElements.promptInput.value = "Transform me into a 1920s vintage glamour portrait, black-and-white, soft shadows, art deco background, ultra-realistic cinematic lighting.";
     DOMElements.promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
     DOMElements.promptInput.focus();
 }
 
 function initializeCursor() {
     if (!DOMElements.cursorDot) return;
-    let mouseX = 0, mouseY = 0, outlineX = 0, outlineY = 0;
-    window.addEventListener('mousemove', e => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-    });
-
+    let mouseX = 0, mouseY = 0;
+    window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
     const animate = () => {
         DOMElements.cursorDot.style.left = `${mouseX}px`;
         DOMElements.cursorDot.style.top = `${mouseY}px`;
-        const ease = 0.15;
-        outlineX += (mouseX - outlineX) * ease;
-        outlineY += (mouseY - outlineY) * ease;
-        DOMElements.cursorOutline.style.transform = `translate(calc(${outlineX}px - 50%), calc(${outlineY}px - 50%))`;
         requestAnimationFrame(animate);
     };
     requestAnimationFrame(animate);
-
     document.querySelectorAll('a, button, textarea, input, label').forEach(el => {
         el.addEventListener('mouseover', () => DOMElements.cursorOutline?.classList.add('cursor-hover'));
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
