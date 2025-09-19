@@ -139,6 +139,12 @@
                             <button id="generate-btn" class="w-10 h-10 bg-gray-800 text-white rounded-lg flex items-center justify-center hover:bg-black transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-gray-400" aria-label="Generate AI Image"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></button>
                         </div>
                     </div>
+                     <!-- NEW: Navratri Try-On Button -->
+                    <div class="mt-4 text-center">
+                        <button id="navratri-tryon-btn" class="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300">
+                            ✨ Try Navratri Dresses
+                        </button>
+                    </div>
                 </div>
                 <div id="result-container" class="w-full max-w-5xl mt-8 hidden">
                     <div id="loading-indicator" class="w-full max-w-sm mx-auto hidden">
@@ -253,6 +259,63 @@
             <button id="close-welcome-modal-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-300">Start Creating</button>
         </div>
     </div>
+
+    <!-- NEW: Navratri Try-On Modal -->
+    <div id="navratri-modal" aria-hidden="true" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible">
+        <div id="navratri-modal-content" class="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-4xl w-full text-center fade-in-slide-up relative max-h-[90vh] flex flex-col">
+            <button id="close-navratri-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors z-10 text-3xl leading-none">&times;</button>
+            <div class="flex-grow overflow-y-auto">
+                <!-- Step 1: Upload Photo -->
+                <div id="tryon-step-1" class="">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Virtual Navratri Try-On</h2>
+                    <p class="text-gray-500 mb-6">Upload a full-body photo to get started.</p>
+                    <input type="file" id="tryon-image-upload-input" accept="image/png, image/jpeg" class="hidden">
+                    <button id="tryon-image-upload-btn" class="bg-blue-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-600 transition-all">Upload Your Photo</button>
+                    <p class="text-xs text-gray-400 mt-4">For best results, use a clear, well-lit, front-facing photo.</p>
+                </div>
+
+                <!-- Step 2: Select Style -->
+                <div id="tryon-step-2" class="hidden">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Select Your Style</h2>
+                    <p class="text-gray-500 mb-6">This will help us show you the right collection.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button class="gender-btn" data-gender="female">Chanya Choli Collection</button>
+                        <button class="gender-btn" data-gender="male">Kurta Collection</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Select Dress -->
+                <div id="tryon-step-3" class="hidden">
+                    <div class="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
+                        <h2 class="text-2xl font-semibold text-gray-800">Choose an Outfit</h2>
+                        <button id="tryon-back-btn" class="text-sm text-gray-500 hover:text-gray-800">&larr; Back to style selection</button>
+                    </div>
+                    <div id="dress-gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+                        <!-- Dress images will be populated here -->
+                    </div>
+                    <button id="tryon-generate-btn" class="w-full sm:w-auto bg-green-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-600 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Generate Try-On
+                    </button>
+                </div>
+
+                <!-- Step 4: Result -->
+                <div id="tryon-step-4" class="hidden">
+                    <div id="tryon-loading-indicator" class="w-full max-w-sm mx-auto">
+                        <p class="font-medium text-gray-700 mb-3">Dressing you up with AI...</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="tryon-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="tryon-timer" class="text-sm text-gray-500 mt-3">Getting ready...</p>
+                    </div>
+                    <div id="tryon-result-image" class="mt-6"></div>
+                    <div class="mt-6">
+                         <button id="tryon-start-new-btn" class="text-blue-600 font-semibold hover:text-blue-800 transition-colors">Start New Try-On</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module" src="script.js"></script>
 </body>
