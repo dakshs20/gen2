@@ -115,14 +115,14 @@ textarea::-webkit-scrollbar-thumb:hover {
     transition: width 0.2s linear; 
 }
 
-#auth-modal, #out-of-credits-modal, #navratri-modal, #welcome-credits-modal { 
+#auth-modal, #out-of-credits-modal { 
     transition: opacity 0.3s ease, visibility 0.3s ease; 
 }
-#auth-modal[aria-hidden="true"], #out-of-credits-modal[aria-hidden="true"], #navratri-modal[aria-hidden="true"], #welcome-credits-modal[aria-hidden="true"] { 
+#auth-modal[aria-hidden="true"], #out-of-credits-modal[aria-hidden="true"] { 
     opacity: 0; 
     visibility: hidden; 
 }
-#auth-modal[aria-hidden="false"], #out-of-credits-modal[aria-hidden="false"], #navratri-modal[aria-hidden="false"], #welcome-credits-modal[aria-hidden="false"] { 
+#auth-modal[aria-hidden="false"], #out-of-credits-modal[aria-hidden="false"] { 
     opacity: 1; 
     visibility: visible; 
 }
@@ -439,7 +439,7 @@ textarea::-webkit-scrollbar-thumb:hover {
     display: block;
 }
 
-/* --- NEW: Style for prompt text clamping --- */
+/* NEW: Style for prompt text clamping */
 .line-clamp-3 {
     overflow: hidden;
     display: -webkit-box;
@@ -447,7 +447,7 @@ textarea::-webkit-scrollbar-thumb:hover {
     -webkit-line-clamp: 3;
 }
 
-/* --- NEW: AI Prompt Suggestion Buttons --- */
+/* NEW: AI Prompt Suggestion Buttons */
 .prompt-suggestion-btn {
     padding: 6px 12px;
     background-color: #eef2ff; /* Light indigo background */
@@ -467,43 +467,6 @@ textarea::-webkit-scrollbar-thumb:hover {
     background-color: #e0e7ff;
     border-color: #a5b4fc;
     transform: translateY(-1px);
-}
-
-/* --- NEW: Sticky Promo Bar --- */
-#sticky-promo-bar {
-    position: -webkit-sticky; /* For Safari */
-    position: sticky;
-    top: 0;
-    width: 100%;
-}
-
-/* --- NEW: Navratri Try-On Modal Styles --- */
-.gender-btn {
-    @apply w-full sm:w-auto text-lg font-semibold py-4 px-8 border-2 rounded-lg transition-all duration-300;
-}
-
-.gender-btn[data-gender="female"] {
-    @apply border-pink-400 text-pink-500 hover:bg-pink-400 hover:text-white;
-}
-
-.gender-btn[data-gender="male"] {
-    @apply border-indigo-400 text-indigo-500 hover:bg-indigo-400 hover:text-white;
-}
-
-.dress-item {
-    @apply relative aspect-w-1 aspect-h-1 rounded-lg overflow-hidden border-2 border-transparent cursor-pointer transition-all duration-300;
-}
-
-.dress-item img {
-    @apply w-full h-full object-cover;
-}
-
-.dress-item.selected {
-    @apply border-green-500 ring-2 ring-green-500;
-}
-
-.dress-item:hover {
-    @apply transform scale-105 shadow-lg;
 }
 
 
@@ -534,3 +497,12 @@ textarea::-webkit-scrollbar-thumb:hover {
         height: 56px;
     }
 }
+
+/* --- NEW: Sticky Promo Bar --- */
+#sticky-promo-bar {
+    position: -webkit-sticky; /* For Safari */
+    position: sticky;
+    top: 0;
+    width: 100%;
+}
+
