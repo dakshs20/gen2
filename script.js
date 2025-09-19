@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'tryon-start-new-btn', 'tryon-back-btn'
     ];
     
-    // FIX: Populate DOMElements with camelCase keys
+    // Populate DOMElements with camelCase keys
     ids.forEach(id => {
         const element = document.getElementById(id);
         if (element) {
@@ -182,8 +182,8 @@ function toggleModal(modal, show) {
 
 async function updateUIForAuthState(user) {
     if (user) {
-        DOMElements.authBtn.textContent = 'Sign Out';
-        DOMElements.mobileAuthBtn.textContent = 'Sign Out';
+        if (DOMElements.authBtn) DOMElements.authBtn.textContent = 'Sign Out';
+        if (DOMElements.mobileAuthBtn) DOMElements.mobileAuthBtn.textContent = 'Sign Out';
         try {
             const token = await user.getIdToken();
             const response = await fetch('/api/credits', {
@@ -206,31 +206,38 @@ async function updateUIForAuthState(user) {
             console.error("Credit fetch error:", error);
             currentUserCredits = 0;
             updateCreditDisplay();
-            showMessage("Could not fetch your credit balance.", "error");
+            if (DOMElements.messageBox) { // Check if messageBox exists before showing a message
+                showMessage("Could not fetch your credit balance.", "error");
+            }
         }
     } else {
         currentUserCredits = 0;
-        DOMElements.authBtn.textContent = 'Sign In';
-        DOMElements.mobileAuthBtn.textContent = 'Sign In';
+        if (DOMElements.authBtn) DOMElements.authBtn.textContent = 'Sign In';
+        if (DOMElements.mobileAuthBtn) DOMElements.mobileAuthBtn.textContent = 'Sign In';
         updateCreditDisplay();
     }
 }
 
 function updateCreditDisplay() {
     const text = auth.currentUser ? `Credits: ${currentUserCredits}` : 'Sign in to generate';
-    DOMElements.generationCounter.textContent = text;
-    DOMElements.mobileGenerationCounter.textContent = text;
+    // FIX: Check if elements exist before updating them
+    if (DOMElements.generationCounter) {
+        DOMElements.generationCounter.textContent = text;
+    }
+    if (DOMElements.mobileGenerationCounter) {
+        DOMElements.mobileGenerationCounter.textContent = text;
+    }
 }
 
 function resetToGeneratorView() {
-    DOMElements.generatorUi.classList.remove('hidden');
-    DOMElements.resultContainer.classList.add('hidden');
-    DOMElements.imageGrid.innerHTML = '';
-    DOMElements.messageBox.innerHTML = '';
-    DOMElements.postGenerationControls.classList.add('hidden');
+    if (DOMElements.generatorUi) DOMElements.generatorUi.classList.remove('hidden');
+    if (DOMElements.resultContainer) DOMElements.resultContainer.classList.add('hidden');
+    if (DOMElements.imageGrid) DOMElements.imageGrid.innerHTML = '';
+    if (DOMElements.messageBox) DOMElements.messageBox.innerHTML = '';
+    if (DOMElements.postGenerationControls) DOMElements.postGenerationControls.classList.add('hidden');
     removeUploadedImage();
-    DOMElements.promptInput.value = '';
-    DOMElements.regeneratePromptInput.value = '';
+    if (DOMElements.promptInput) DOMElements.promptInput.value = '';
+    if (DOMElements.regeneratePromptInput) DOMElements.regeneratePromptInput.value = '';
 }
 
 // --- Core Application Logic ---
@@ -337,16 +344,20 @@ async function generateImage(prompt, isRegenerate) {
 
 function showTryOnStep(stepNumber) {
     [1, 2, 3, 4].forEach(n => {
-        DOMElements[`tryonStep${n}`].classList.add('hidden');
+        if (DOMElements[`tryonStep${n}`]) {
+            DOMElements[`tryonStep${n}`].classList.add('hidden');
+        }
     });
-    DOMElements[`tryonStep${stepNumber}`].classList.remove('hidden');
+    if (DOMElements[`tryonStep${stepNumber}`]) {
+        DOMElements[`tryonStep${stepNumber}`].classList.remove('hidden');
+    }
 }
 
 function resetTryOnFlow() {
     tryOnState = { personImage: null, garmentImage: null, isGenerating: false, timerInterval: null };
-    DOMElements.tryonImageUploadInput.value = '';
-    DOMElements.dressGallery.innerHTML = '';
-    DOMElements.tryonGenerateBtn.disabled = true;
+    if (DOMElements.tryonImageUploadInput) DOMElements.tryonImageUploadInput.value = '';
+    if (DOMElements.dressGallery) DOMElements.dressGallery.innerHTML = '';
+    if (DOMElements.tryonGenerateBtn) DOMElements.tryonGenerateBtn.disabled = true;
     showTryOnStep(1);
 }
 
@@ -369,6 +380,7 @@ function handleGenderSelection(event) {
 
 function populateDressGallery(gender) {
     const dresses = NAVRATRI_DRESSES[gender] || [];
+    if (!DOMElements.dressGallery) return;
     DOMElements.dressGallery.innerHTML = '';
     dresses.forEach(src => {
         const item = document.createElement('div');
@@ -378,7 +390,7 @@ function populateDressGallery(gender) {
             document.querySelectorAll('.dress-item').forEach(el => el.classList.remove('selected'));
             item.classList.add('selected');
             tryOnState.garmentImage = src;
-            DOMElements.tryonGenerateBtn.disabled = false;
+            if (DOMElements.tryonGenerateBtn) DOMElements.tryonGenerateBtn.disabled = false;
         });
         DOMElements.dressGallery.appendChild(item);
     });
@@ -455,13 +467,12 @@ async function handleTryOnGeneration() {
         }
         
         const imageUrl = `data:image/png;base64,${base64Data}`;
-        DOMElements.tryonLoadingIndicator.classList.add('hidden');
-        // FIX: Correct property access from tryonresultimage to tryonResultImage
-        DOMElements.tryonResultImage.innerHTML = `<img src="${imageUrl}" alt="Virtual try-on result" class="mx-auto rounded-lg shadow-lg max-h-[60vh] w-auto">`;
+        if (DOMElements.tryonLoadingIndicator) DOMElements.tryonLoadingIndicator.classList.add('hidden');
+        if (DOMElements.tryonResultImage) DOMElements.tryonResultImage.innerHTML = `<img src="${imageUrl}" alt="Virtual try-on result" class="mx-auto rounded-lg shadow-lg max-h-[60vh] w-auto">`;
 
     } catch (error) {
         console.error('Try-on generation failed:', error);
-        DOMElements.tryonLoadingIndicator.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Please try again.</p>`;
+        if (DOMElements.tryonLoadingIndicator) DOMElements.tryonLoadingIndicator.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Please try again.</p>`;
     } finally {
         stopTryOnTimer();
         tryOnState.isGenerating = false;
@@ -472,15 +483,15 @@ async function handleTryOnGeneration() {
 // --- UI Update Functions for Generation ---
 
 function startLoadingUI(isRegenerate) {
-    DOMElements.imageGrid.innerHTML = '';
-    DOMElements.messageBox.innerHTML = '';
+    if (DOMElements.imageGrid) DOMElements.imageGrid.innerHTML = '';
+    if (DOMElements.messageBox) DOMElements.messageBox.innerHTML = '';
     if (isRegenerate) {
-        DOMElements.loadingIndicator.classList.remove('hidden');
-        DOMElements.postGenerationControls.classList.add('hidden');
+        if (DOMElements.loadingIndicator) DOMElements.loadingIndicator.classList.remove('hidden');
+        if (DOMElements.postGenerationControls) DOMElements.postGenerationControls.classList.add('hidden');
     } else {
-        DOMElements.resultContainer.classList.remove('hidden');
-        DOMElements.loadingIndicator.classList.remove('hidden');
-        DOMElements.generatorUi.classList.add('hidden');
+        if (DOMElements.resultContainer) DOMElements.resultContainer.classList.remove('hidden');
+        if (DOMElements.loadingIndicator) DOMElements.loadingIndicator.classList.remove('hidden');
+        if (DOMElements.generatorUi) DOMElements.generatorUi.classList.add('hidden');
     }
     timerInterval = startTimer();
 }
@@ -488,9 +499,9 @@ function startLoadingUI(isRegenerate) {
 function stopLoadingUI() {
     isGenerating = false;
     stopTimer(timerInterval);
-    DOMElements.loadingIndicator.classList.add('hidden');
-    DOMElements.regeneratePromptInput.value = lastPrompt;
-    DOMElements.postGenerationControls.classList.remove('hidden');
+    if (DOMElements.loadingIndicator) DOMElements.loadingIndicator.classList.add('hidden');
+    if (DOMElements.regeneratePromptInput) DOMElements.regeneratePromptInput.value = lastPrompt;
+    if (DOMElements.postGenerationControls) DOMElements.postGenerationControls.classList.remove('hidden');
     addNavigationButtons();
 }
 
@@ -530,12 +541,13 @@ function displayImage(imageUrl, prompt) {
     };
 
     imgContainer.append(img, downloadButton);
-    DOMElements.imageGrid.appendChild(imgContainer);
+    if (DOMElements.imageGrid) DOMElements.imageGrid.appendChild(imgContainer);
 }
 
 // --- Utility Functions ---
 
 function showMessage(text, type = 'info') {
+    if (!DOMElements.messageBox) return;
     const messageEl = document.createElement('div');
     messageEl.className = `p-4 rounded-lg ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'} fade-in-slide-up`;
     messageEl.textContent = text;
@@ -544,6 +556,7 @@ function showMessage(text, type = 'info') {
 }
 
 function addNavigationButtons() {
+    if (!DOMElements.messageBox) return;
     const startNewButton = document.createElement('button');
     startNewButton.textContent = '← Start New';
     startNewButton.className = 'text-sm sm:text-base mt-4 text-blue-600 font-semibold hover:text-blue-800 transition-colors';
@@ -557,9 +570,9 @@ function handleImageUpload(event) {
     const reader = new FileReader();
     reader.onloadend = () => {
         uploadedImageData = { mimeType: file.type, data: reader.result.split(',')[1] };
-        DOMElements.imagePreview.src = reader.result;
-        DOMElements.imagePreviewContainer.classList.remove('hidden');
-        DOMElements.promptInput.placeholder = "Describe the edits you want to make...";
+        if (DOMElements.imagePreview) DOMElements.imagePreview.src = reader.result;
+        if (DOMElements.imagePreviewContainer) DOMElements.imagePreviewContainer.classList.remove('hidden');
+        if (DOMElements.promptInput) DOMElements.promptInput.placeholder = "Describe the edits you want to make...";
     };
     reader.readAsDataURL(file);
 }
@@ -567,9 +580,9 @@ function handleImageUpload(event) {
 function removeUploadedImage() {
     uploadedImageData = null;
     if (DOMElements.imageUploadInput) DOMElements.imageUploadInput.value = '';
-    DOMElements.imagePreviewContainer.classList.add('hidden');
-    DOMElements.imagePreview.src = '';
-    DOMElements.promptInput.placeholder = "An oil painting of a futuristic city skyline at dusk...";
+    if (DOMElements.imagePreviewContainer) DOMElements.imagePreviewContainer.classList.add('hidden');
+    if (DOMElements.imagePreview) DOMElements.imagePreview.src = '';
+    if (DOMElements.promptInput) DOMElements.promptInput.placeholder = "An oil painting of a futuristic city skyline at dusk...";
 }
 
 async function handleEnhancePrompt() { showMessage("Prompt enhancement is coming soon!", "info"); }
@@ -585,10 +598,12 @@ function toggleMusic() {
     isPlaying ? DOMElements.lofiMusic.play().catch(e => console.error("Audio failed:", e)) : DOMElements.lofiMusic.pause();
 }
 
-function startTimer(elId = 'timer', barId = 'progressBar', max = 17) {
+function startTimer(elId = 'timer', barId = 'tryonProgressBar', max = 17) {
     let startTime = Date.now();
-    const timerEl = DOMElements[elId];
-    const progressBar = DOMElements[barId];
+    const camelElId = camelCase(elId);
+    const camelBarId = camelCase(barId);
+    const timerEl = DOMElements[camelElId];
+    const progressBar = DOMElements[camelBarId];
     const maxTime = max * 1000;
     if (progressBar) progressBar.style.width = '0%';
     return setInterval(() => {
@@ -599,15 +614,17 @@ function startTimer(elId = 'timer', barId = 'progressBar', max = 17) {
     }, 100);
 }
 
-function stopTimer(interval, barId = 'progressBar') {
+function stopTimer(interval, barId = 'tryonProgressBar') {
     clearInterval(interval);
-    if (DOMElements[barId]) DOMElements[barId].style.width = '100%';
+    const camelBarId = camelCase(barId);
+    if (DOMElements[camelBarId]) DOMElements[camelBarId].style.width = '100%';
 }
 
-function startTryOnTimer() { tryOnState.timerInterval = startTimer('tryonTimer', 'tryonProgressBar', 30); }
-function stopTryOnTimer() { stopTimer(tryOnState.timerInterval, 'tryonProgressBar'); }
+function startTryOnTimer() { tryOnState.timerInterval = startTimer('tryon-timer', 'tryon-progress-bar', 30); }
+function stopTryOnTimer() { stopTimer(tryOnState.timerInterval, 'tryon-progress-bar'); }
 
 function handlePromoTryNow() {
+    if (!DOMElements.promptInput) return;
     DOMElements.promptInput.value = "Transform me into a 1920s vintage glamour portrait, black-and-white, soft shadows, art deco background, ultra-realistic cinematic lighting.";
     DOMElements.promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
     DOMElements.promptInput.focus();
