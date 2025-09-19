@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.promoTryNowBtn = document.getElementById('promo-try-now-btn');
     
     initializeEventListeners();
-    handleLibraryRedirect(); // Check for prompt from library on page load
 });
 
 function initializeEventListeners() {
@@ -123,47 +122,6 @@ function initializeEventListeners() {
     initializeCursor();
 }
 
-// --- NEW: Handle Redirect from Prompt Library ---
-function handleLibraryRedirect() {
-    const selectedPrompt = localStorage.getItem('selectedPrompt');
-    const fromLibrary = localStorage.getItem('fromPromptLibrary');
-
-    if (selectedPrompt && fromLibrary) {
-        DOMElements.promptInput.value = selectedPrompt;
-
-        // Show the notification toast
-        const toast = document.getElementById('library-redirect-toast');
-        const toastMessage = document.getElementById('toast-message');
-        
-        let clothing = "your new outfit";
-        if (selectedPrompt.toLowerCase().includes('chaniya choli')) {
-            clothing = "this Chaniya Choli";
-        } else if (selectedPrompt.toLowerCase().includes('kurta')) {
-            clothing = "this Kurta";
-        }
-        
-        toastMessage.textContent = `Add your image to see how you look in ${clothing}!`;
-        toast.classList.remove('hidden');
-        
-        // Make the image upload button pulse to attract attention
-        DOMElements.imageUploadBtn.classList.add('animate-pulse-strong');
-
-        // Scroll to the prompt input for better visibility
-        DOMElements.promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        // Hide notification and remove pulse after a few seconds
-        setTimeout(() => {
-            toast.classList.add('hidden');
-            DOMElements.imageUploadBtn.classList.remove('animate-pulse-strong');
-        }, 6000);
-
-        // Clean up localStorage to prevent this from running again on refresh
-        localStorage.removeItem('selectedPrompt');
-        localStorage.removeItem('fromPromptLibrary');
-    }
-}
-
-
 // --- UI & State Management ---
 
 function toggleModal(modal, show) {
@@ -182,7 +140,7 @@ async function updateUIForAuthState(user) {
         DOMElements.authBtn.textContent = 'Sign Out';
         DOMElements.mobileAuthBtn.textContent = 'Sign Out';
         try {
-            const token = await user.getIdToken(true); // Changed this line to force a token refresh
+            const token = await user.getIdToken();
             const response = await fetch('/api/credits', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -194,14 +152,10 @@ async function updateUIForAuthState(user) {
             currentUserCredits = data.credits;
             updateCreditDisplay();
 
-            // --- NEW USER WELCOME LOGIC ---
             if (data.isNewUser && data.credits > 0) {
-                if(DOMElements.freeCreditsAmount) {
-                    DOMElements.freeCreditsAmount.textContent = data.credits;
-                }
+                if(DOMElements.freeCreditsAmount) DOMElements.freeCreditsAmount.textContent = data.credits;
                 toggleModal(DOMElements.welcomeCreditsModal, true);
             }
-
         } catch (error) {
             console.error("Credit fetch error:", error);
             currentUserCredits = 0;
@@ -245,23 +199,16 @@ function handleAuthAction() {
 
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
-        .then(() => {
-            toggleModal(DOMElements.authModal, false)
-        })
-        .catch(error => {
-            console.error("Authentication Error:", error);
-            showMessage('Failed to sign in. Please try again.', 'error');
-        });
+        .then(() => toggleModal(DOMElements.authModal, false))
+        .catch(error => console.error("Authentication Error:", error));
 }
 
 function handleImageGenerationRequest(isRegenerate) {
     if (isGenerating) return;
-
     if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
-
     if (currentUserCredits <= 0) {
         toggleModal(DOMElements.outOfCreditsModal, true);
         return;
@@ -269,7 +216,6 @@ function handleImageGenerationRequest(isRegenerate) {
 
     const promptInput = isRegenerate ? DOMElements.regeneratePromptInput : DOMElements.promptInput;
     const prompt = promptInput.value.trim();
-
     if (!prompt) {
         showMessage('Please describe what you want to create.', 'error');
         return;
@@ -282,17 +228,11 @@ function handleImageGenerationRequest(isRegenerate) {
 async function generateImage(prompt, isRegenerate) {
     isGenerating = true;
     startLoadingUI(isRegenerate);
-
     try {
         const token = await auth.currentUser.getIdToken();
-        
-        const deductResponse = await fetch('/api/credits', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
+        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         if (!deductResponse.ok) {
-            if(deductResponse.status === 402) {
+            if (deductResponse.status === 402) {
                  toggleModal(DOMElements.outOfCreditsModal, true);
             } else {
                  throw new Error('Failed to deduct credit.');
@@ -307,13 +247,9 @@ async function generateImage(prompt, isRegenerate) {
 
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: selectedAspectRatio })
         });
-
         if (!generateResponse.ok) {
             const errorResult = await generateResponse.json();
             throw new Error(errorResult.error || `API Error: ${generateResponse.status}`);
@@ -331,10 +267,9 @@ async function generateImage(prompt, isRegenerate) {
         if (!base64Data) {
             throw new Error("No image data received from API.");
         }
-
+        
         const imageUrl = `data:image/png;base64,${base64Data}`;
         displayImage(imageUrl, prompt);
-
     } catch (error) {
         console.error('Image generation failed:', error);
         showMessage(`Sorry, we couldn't generate the image. ${error.message}`, 'error');
@@ -396,14 +331,12 @@ function displayImage(imageUrl, prompt) {
         try {
             const blob = dataURLtoBlob(imageUrl);
             const url = URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
             a.href = url;
             a.download = 'genart-image.png';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error("Download failed:", error);
@@ -535,5 +468,4 @@ function initializeCursor() {
         el.addEventListener('mouseout', () => DOMElements.cursorOutline?.classList.remove('cursor-hover'));
     });
 }
-
 
