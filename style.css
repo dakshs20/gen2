@@ -115,14 +115,14 @@ textarea::-webkit-scrollbar-thumb:hover {
     transition: width 0.2s linear; 
 }
 
-#auth-modal, #out-of-credits-modal { 
+#auth-modal, #out-of-credits-modal, #vto-modal { 
     transition: opacity 0.3s ease, visibility 0.3s ease; 
 }
-#auth-modal[aria-hidden="true"], #out-of-credits-modal[aria-hidden="true"] { 
+#auth-modal[aria-hidden="true"], #out-of-credits-modal[aria-hidden="true"], #vto-modal.invisible { 
     opacity: 0; 
     visibility: hidden; 
 }
-#auth-modal[aria-hidden="false"], #out-of-credits-modal[aria-hidden="false"] { 
+#auth-modal[aria-hidden="false"], #out-of-credits-modal[aria-hidden="false"], #vto-modal:not(.invisible) { 
     opacity: 1; 
     visibility: visible; 
 }
@@ -506,3 +506,9 @@ textarea::-webkit-scrollbar-thumb:hover {
     width: 100%;
 }
 
+/* --- NEW: VTO Modal Close Button --- */
+#vto-close-btn {
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: bold;
+}
