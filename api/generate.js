@@ -53,11 +53,17 @@ export default async function handler(req, res) {
             body: JSON.stringify(payload)
         });
 
-        // --- IMPROVED ERROR HANDLING ---
+        // --- MORE ROBUST ERROR HANDLING ---
         if (!apiResponse.ok) {
-            // Try to parse the error response from Google for more details.
-            const errorData = await apiResponse.json();
-            const errorMessage = errorData.error?.message || 'An unknown error occurred with the Google API.';
+            let errorMessage = 'An unknown error occurred with the Google API.';
+            try {
+                // Try to parse the error response from Google for more details.
+                const errorData = await apiResponse.json();
+                errorMessage = errorData.error?.message || JSON.stringify(errorData);
+            } catch (e) {
+                // If the response isn't JSON, get the raw text.
+                errorMessage = await apiResponse.text();
+            }
             console.error("Google API Error:", errorMessage);
             return res.status(apiResponse.status).json({ error: errorMessage });
         }
