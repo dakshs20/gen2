@@ -21,18 +21,15 @@ const imageGalleryUrls = [
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
     "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
-    "https://iili.io/Fii7T3Q.md.png",
-    "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
-    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
-    "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
-    "https://iili.io/Fii7T3Q.md.png", "https://iili.io/FiiqmhB.md.png",
-    "https://iili.io/FiiC8VS.md.png", "https://iili.io/FiizC0P.md.png",
-    "https://iili.io/FiiT4UP.md.png", "https://iili.io/FiiA23B.md.png",
-    "https://iili.io/Fii52mF.md.png", "https://iili.io/Fii7T3Q.md.png",
-    "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
-    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
-    "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
-    "https://iili.io/Fii7T3Q.md.png"
+    "https://iili.io/Fii7T3Q.md.png", "https://iili.io/K7bN7Hl.md.png", 
+    "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", 
+    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", 
+    "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", 
+    "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png", 
+    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", 
+    "https://iili.io/K7bs5wg.md.png", "https://iili.io/K7bDzpS.md.png", 
+    "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", 
+    "https://iili.io/K7bP679.md.png"
 ];
 
 // --- Global State ---
