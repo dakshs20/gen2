@@ -57,22 +57,20 @@ body {
 .ratio-options-container {
     position: absolute;
     bottom: calc(100% + 0.5rem);
-    right: 0;
-    width: 200px;
+    left: 0;
     background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     border-radius: 1rem;
     border: 1px solid rgba(229, 231, 235, 0.9);
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-    padding: 0.5rem;
+    padding: 0.75rem;
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
     opacity: 0;
     visibility: hidden;
     transform: translateY(10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-    transform-origin: bottom right;
+    transform-origin: bottom left;
 }
 
 .ratio-options-container.visible {
@@ -81,35 +79,39 @@ body {
     transform: translateY(0);
 }
 
-.ratio-option-btn {
+.ratio-option-box {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     padding: 0.75rem;
     border-radius: 0.75rem;
-    text-align: left;
+    cursor: pointer;
     transition: background-color 0.2s;
+    border: 2px solid transparent;
 }
 
-.ratio-option-btn:hover {
+.ratio-option-box:hover {
     background-color: #f3f4f6; /* gray-100 */
 }
 
-.ratio-option-btn.active {
+.ratio-option-box.active {
     background-color: #dbeafe; /* blue-100 */
+    border-color: #3b82f6; /* blue-500 */
 }
 
-.ratio-text {
+.ratio-option-box span {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #1f2937; /* gray-800 */
+    color: #1f2937;
 }
 
-.ratio-value {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280; /* gray-500 */
-}
+/* Ratio icons */
+.ratio-icon-square { width: 24px; height: 24px; border: 2px solid #6b7280; border-radius: 4px; }
+.ratio-icon-landscape { width: 28px; height: 18px; border: 2px solid #6b7280; border-radius: 4px; }
+.ratio-icon-portrait { width: 18px; height: 28px; border: 2px solid #6b7280; border-radius: 4px; }
+.ratio-icon-instagram { width: 22px; height: 28px; border: 2px solid #6b7280; border-radius: 4px; }
 
 
 /* Responsive adjustments */
