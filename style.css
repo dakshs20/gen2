@@ -81,8 +81,8 @@ body {
        /* Improve scrolling performance on iOS */
        -webkit-overflow-scrolling: touch;
        /* Make the fade more prominent on mobile at top and bottom */
-       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 75%, transparent 100%);
-       mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 75%, transparent 100%);
+       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
+       mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
     }
 
     #background-grid {
