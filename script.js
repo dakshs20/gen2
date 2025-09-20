@@ -23,9 +23,7 @@ const imageGalleryUrls = [
     "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png", 
     "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", "https://iili.io/K7bP679.md.png",
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
-    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
-    "https://i.ibb.co/b3bxtK3/K7-DZCXa.png", "https://i.ibb.co/hX4P1P9/K7-Dpu-DP.png", "https://i.ibb.co/yQW2YwL/K7b-H3-DN.png", "https://i.ibb.co/hM4Qz1q/K7bd-Tn-S.png",
-    "https://i.ibb.co/dKFNJtC/K7bd-LN4.png", "https://i.ibb.co/PggYJ4s/K7b2c0-X.png", "https://i.ibb.co/3k5gGz8/K7b2-Dmv.png"
+    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png"
 ];
 
 
