@@ -1,7 +1,5 @@
-// --- Firebase and Auth Initialization ---
+// --- Firebase and Auth Initialization (Minimal) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -13,175 +11,117 @@ const firebaseConfig = {
     measurementId: "G-EDCW8VYXY6"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+initializeApp(firebaseConfig);
 
-// --- IMPORTANT: This array now serves as a fallback ---
-const fallbackImageUrls = [
-    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png",
-    "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png",
-    "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png",
+const imageGalleryUrls = [
+    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png", 
+    "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", 
+    "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png", 
     "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", "https://iili.io/K7bP679.md.png",
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png"
 ];
 
-// --- Global State ---
-let currentUserCredits = 0;
-let uploadedImageData = null;
-let isGenerating = false;
-let timerInterval;
-let currentAspectRatio = '1:1';
-
-// --- DOM Element Caching ---
+let uploadedImageData = null, isGenerating = false, timerInterval, currentAspectRatio = '1:1';
+let galleryImageIndex = 0;
+let isLoadingMoreImages = false;
+let originalRatioIconHTML = '';
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     const ids = [
-        'auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn',
-        'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal',
-        'close-welcome-modal-btn', 'generation-counter', 'prompt-input',
-        'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn',
-        'image-preview-container', 'image-preview', 'result-container', 'image-grid',
-        'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer',
-        'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options'
+        'auth-btn', 'generation-counter', 'prompt-input', 
+        'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 
+        'image-preview-container', 'image-preview', 'result-container', 'image-grid', 
+        'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 
+        'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options',
+        // Modals are no longer needed in this mode, but we keep the IDs for easy restoration
+        'auth-modal', 'out-of-credits-modal', 'welcome-credits-modal'
     ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
+    
+    // Hide auth-related elements
+    if (DOMElements.authBtn) DOMElements.authBtn.style.display = 'none';
+    if (DOMElements.generationCounter) DOMElements.generationCounter.style.display = 'none';
+    const pricingLink = document.querySelector('a[href="pricing.html"]');
+    if(pricingLink) pricingLink.style.display = 'none';
+    
+    if (DOMElements.ratioSelectorBtn) {
+        originalRatioIconHTML = DOMElements.ratioSelectorBtn.innerHTML;
+    }
 
     initializeEventListeners();
-    listenForSharedImages();
+    populateInitialGallery();
 });
 
 function initializeEventListeners() {
-    // Centralized Authentication State Manager - Placed here to prevent race conditions
-    onAuthStateChanged(auth, user => updateUIForAuthState(user));
-
-    DOMElements.authBtn?.addEventListener('click', handleAuthAction);
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
-    DOMElements.closeCreditsModalBtn?.addEventListener('click', () => {
-        toggleModal(DOMElements.outOfCreditsModal, false);
-        resetUIAfterGeneration();
-    });
-    DOMElements.closeWelcomeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.welcomeCreditsModal, false));
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
     DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
-    DOMElements.ratioSelectorBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleRatioOptions();
+    
+    DOMElements.ratioSelectorBtn?.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        toggleRatioOptions(); 
     });
+
     document.querySelectorAll('.ratio-option-box').forEach(box => {
-        box.addEventListener('click', selectRatio);
+        box.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectRatio(e);
+        });
     });
+
     document.addEventListener('click', () => {
         if (DOMElements.ratioOptions?.classList.contains('visible')) {
             toggleRatioOptions();
         }
     });
+
+    DOMElements.backgroundGridContainer?.addEventListener('scroll', handleScroll);
 }
 
-// --- Robust Auth UI Function ---
-async function updateUIForAuthState(user) {
-    const counter = DOMElements.generationCounter;
-    if (user) {
-        DOMElements.authBtn.textContent = 'Sign Out';
-        try {
-            const token = await user.getIdToken(true);
-            const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to fetch credits: ${errorText}`);
-            }
-            const data = await response.json();
-            currentUserCredits = data.credits;
-            if (counter) counter.textContent = `Credits: ${currentUserCredits}`;
-            if (data.isNewUser) {
-                const freeCreditsEl = document.getElementById('free-credits-amount');
-                if (freeCreditsEl) freeCreditsEl.textContent = data.credits;
-                toggleModal(DOMElements.welcomeCreditsModal, true);
-            }
-        } catch (error) {
-            console.error("Critical error fetching credits:", error);
-            if (counter) counter.textContent = "Credits: Error";
-        }
-    } else {
-        DOMElements.authBtn.textContent = 'Sign In';
-        if (counter) counter.textContent = "";
-        currentUserCredits = 0;
+function handleScroll() {
+    const container = DOMElements.backgroundGridContainer;
+    if (!container) return;
+    const threshold = 500;
+    const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
+    if (isNearBottom && !isLoadingMoreImages) {
+        appendMoreImages();
     }
 }
 
-function handleAuthAction() {
-    if (auth.currentUser) {
-        signOut(auth).catch(console.error);
-    } else {
-        toggleModal(DOMElements.authModal, true);
-    }
-}
-
-function signInWithGoogle() {
-    signInWithPopup(auth, provider)
-        .then(() => {
-            toggleModal(DOMElements.authModal, false);
-        })
-        .catch((error) => {
-            console.error("Google Sign-In Error:", error);
-            alert("Failed to sign in. Please ensure pop-ups are not blocked by your browser and try again.");
-        });
-}
-
-
-// --- Background Gallery Logic ---
-function listenForSharedImages() {
+function populateInitialGallery() {
     const grid = DOMElements.backgroundGrid;
     if (!grid) return;
-    populateGrid(fallbackImageUrls);
-    const q = query(collection(db, "shared_images"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-        const imageUrls = snapshot.docs.map(doc => doc.data().imageUrl);
-        if (imageUrls.length > 0) {
-            populateGrid(imageUrls);
-        }
-    }, (error) => {
-        console.error("Error fetching shared images: ", error);
-    });
-}
-
-function populateGrid(urls) {
-    const grid = DOMElements.backgroundGrid;
     grid.innerHTML = '';
-    urls.forEach(url => {
-        const img = document.createElement('img');
-        img.className = 'grid-image';
-        img.src = url;
-        img.loading = 'lazy';
-        grid.appendChild(img);
-    });
+    for (let i = 0; i < 30; i++) {
+        appendImageToGrid();
+    }
 }
 
-// --- Core App Logic (Modals, Generation, etc.) ---
-function toggleModal(modal, show) {
-    if (!modal) return;
-    modal.classList.toggle('opacity-0', !show);
-    modal.classList.toggle('invisible', !show);
-    modal.setAttribute('aria-hidden', String(!show));
+function appendMoreImages() {
+    isLoadingMoreImages = true;
+    for (let i = 0; i < 10; i++) {
+        appendImageToGrid();
+    }
+    isLoadingMoreImages = false;
+}
+
+function appendImageToGrid() {
+    const grid = DOMElements.backgroundGrid;
+    if (!grid) return;
+    const img = document.createElement('img');
+    img.className = 'grid-image';
+    img.src = imageGalleryUrls[galleryImageIndex % imageGalleryUrls.length];
+    img.loading = 'lazy';
+    grid.appendChild(img);
+    galleryImageIndex++;
 }
 
 async function handleImageGenerationRequest() {
     if (isGenerating) return;
-    if (!auth.currentUser) {
-        toggleModal(DOMElements.authModal, true);
-        return;
-    }
-    if (currentUserCredits <= 0) {
-        toggleModal(DOMElements.outOfCreditsModal, true);
-        return;
-    }
     const prompt = DOMElements.promptInput.value.trim();
     if (!prompt && !uploadedImageData) return;
     generateImage(prompt);
@@ -190,20 +130,24 @@ async function handleImageGenerationRequest() {
 async function generateImage(prompt) {
     startLoadingUI();
     try {
-        const token = await auth.currentUser.getIdToken();
-        await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        // NOTE: Authorization headers and credit deduction calls are removed.
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: currentAspectRatio })
         });
-        if (!generateResponse.ok) throw new Error('API generation failed');
+        if (!generateResponse.ok) {
+             const errorData = await generateResponse.json();
+             throw new Error(errorData.error || 'API generation failed');
+        }
         const result = await generateResponse.json();
-        const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
+        const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
         if (!base64Data) throw new Error("No image data in response");
+        
         displayImage(`data:image/png;base64,${base64Data}`, prompt);
     } catch (error) {
-        console.error("Generation Error:", error);
+        console.error("Generation Error:", error.message);
+        alert(`Sorry, generation failed: ${error.message}`);
         resetUIAfterGeneration();
     } finally {
         stopLoadingUI();
@@ -229,9 +173,8 @@ function removeUploadedImage() {
 }
 
 function autoResizeTextarea(e) {
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
 }
 
 function toggleRatioOptions() {
@@ -241,8 +184,14 @@ function toggleRatioOptions() {
 function selectRatio(event) {
     const selectedBox = event.currentTarget;
     currentAspectRatio = selectedBox.dataset.ratio;
+    
+    const selectedRatioValue = selectedBox.querySelector('.ratio-value').textContent;
+    DOMElements.ratioSelectorBtn.innerHTML = `<span class="text-sm font-semibold text-gray-700">${selectedRatioValue}</span>`;
+
     document.querySelectorAll('.ratio-option-box').forEach(box => box.classList.remove('active'));
     selectedBox.classList.add('active');
+
+    toggleRatioOptions();
 }
 
 function startLoadingUI() {
@@ -262,16 +211,13 @@ function stopLoadingUI() {
 function applyWatermark(baseImageUrl) {
     return new Promise((resolve, reject) => {
         const watermarkUrl = 'https://iili.io/FsAoG2I.md.png';
-        const mainImage = new Image();
-        mainImage.crossOrigin = 'anonymous';
-        const watermark = new Image();
-        watermark.crossOrigin = 'anonymous';
+        const mainImage = new Image(); mainImage.crossOrigin = 'anonymous';
+        const watermark = new Image(); watermark.crossOrigin = 'anonymous';
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         mainImage.onload = () => {
             watermark.onload = () => {
-                canvas.width = mainImage.width;
-                canvas.height = mainImage.height;
+                canvas.width = mainImage.width; canvas.height = mainImage.height;
                 ctx.drawImage(mainImage, 0, 0);
                 ctx.globalAlpha = 0.75;
                 const watermarkWidth = canvas.width * 0.15;
@@ -282,20 +228,17 @@ function applyWatermark(baseImageUrl) {
                 ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
                 resolve(canvas.toDataURL('image/png'));
             };
-            watermark.onerror = reject;
-            watermark.src = watermarkUrl;
+            watermark.onerror = reject; watermark.src = watermarkUrl;
         };
-        mainImage.onerror = reject;
-        mainImage.src = baseImageUrl;
+        mainImage.onerror = reject; mainImage.src = baseImageUrl;
     });
 }
 
 async function displayImage(imageUrl, prompt) {
-    DOMElements.loadingIndicator.classList.add('hidden');
     try {
         const watermarkedImageUrl = await applyWatermark(imageUrl);
         DOMElements.imageGrid.classList.remove('hidden');
-        DOMElements.imageGrid.innerHTML = '';
+        DOMElements.imageGrid.innerHTML = ''; 
         const imgContainer = document.createElement('div');
         imgContainer.className = 'bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-2 relative group max-w-2xl mx-auto border border-gray-200/80';
         const img = document.createElement('img');
@@ -309,55 +252,18 @@ async function displayImage(imageUrl, prompt) {
         downloadButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
         downloadButton.onclick = () => {
             const a = document.createElement('a');
-            a.href = watermarkedImageUrl;
-            a.download = 'genart-image.png';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = watermarkedImageUrl; a.download = 'genart-image.png';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
         };
-        const shareButton = document.createElement('button');
-        shareButton.className = "bg-black/50 text-white p-2 rounded-full";
-        shareButton.title = "Share to Everyone";
-        shareButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>`;
-        shareButton.onclick = () => shareImage(watermarkedImageUrl, shareButton);
         const closeButton = document.createElement('button');
         closeButton.className = "bg-black/50 text-white p-2 rounded-full";
         closeButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
         closeButton.onclick = resetUIAfterGeneration;
-        buttonContainer.append(downloadButton, shareButton, closeButton);
+        buttonContainer.append(downloadButton, closeButton);
         imgContainer.append(img, buttonContainer);
         DOMElements.imageGrid.appendChild(imgContainer);
     } catch (error) {
-        console.error("Failed to apply watermark:", error);
-        // Fallback to display the original image if watermarking fails
-        displayImage(imageUrl, prompt);
-    }
-}
-
-async function shareImage(imageDataUrl, button) {
-    if (!auth.currentUser) {
-        toggleModal(DOMElements.authModal, true);
-        return;
-    }
-    button.disabled = true;
-    button.innerHTML = '...';
-    try {
-        const token = await auth.currentUser.getIdToken();
-        const response = await fetch('/api/share', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ imageDataUrl })
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Sharing failed due to an unknown server issue.');
-        }
-        button.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    } catch (error) {
-        console.error("Sharing Error:", error);
-        alert(`Sorry, we couldn't share your image at this time. \n\nError: ${error.message}`);
-        button.disabled = false;
-        button.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>`;
+        console.error("Error applying watermark or displaying image:", error);
     }
 }
 
@@ -366,17 +272,25 @@ function resetUIAfterGeneration() {
     DOMElements.imageGrid.innerHTML = '';
     DOMElements.backgroundGridContainer.classList.remove('dimmed');
     DOMElements.promptInput.value = '';
-    autoResizeTextarea({ target: DOMElements.promptInput });
+    autoResizeTextarea({target: DOMElements.promptInput});
     removeUploadedImage();
+    
+    if (DOMElements.ratioSelectorBtn && originalRatioIconHTML) {
+        DOMElements.ratioSelectorBtn.innerHTML = originalRatioIconHTML;
+    }
+    currentAspectRatio = '1:1';
+    document.querySelectorAll('.ratio-option-box').forEach(box => box.classList.remove('active'));
+    document.querySelector('.ratio-option-box[data-ratio="1:1"]')?.classList.add('active');
 }
 
 function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
     let startTime = Date.now();
     timerInterval = setInterval(() => {
         const elapsedTime = Date.now() - startTime;
-        if (DOMElements.timer) DOMElements.timer.textContent = `${(elapsedTime / 1000).toFixed(1)}s`;
-        const progress = Math.min(elapsedTime / 17000, 1);
-        if (DOMElements.progressBar) DOMElements.progressBar.style.width = `${progress * 100}%`;
+        if(DOMElements.timer) DOMElements.timer.textContent = `${(elapsedTime / 1000).toFixed(1)}s`;
+        const progress = Math.min(elapsedTime / 17000, 1); 
+        if(DOMElements.progressBar) DOMElements.progressBar.style.width = `${progress * 100}%`;
     }, 100);
 }
 
