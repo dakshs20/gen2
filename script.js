@@ -1,5 +1,6 @@
-// --- Firebase and Auth Initialization (Minimal) ---
+// --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -11,7 +12,9 @@ const firebaseConfig = {
     measurementId: "G-EDCW8VYXY6"
 };
 
-initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const imageGalleryUrls = [
     "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png", 
@@ -22,7 +25,7 @@ const imageGalleryUrls = [
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png"
 ];
 
-let uploadedImageData = null, isGenerating = false, timerInterval, currentAspectRatio = '1:1';
+let currentUserCredits = 0, uploadedImageData = null, isGenerating = false, timerInterval, currentAspectRatio = '1:1';
 let galleryImageIndex = 0;
 let isLoadingMoreImages = false;
 let originalRatioIconHTML = '';
@@ -30,21 +33,22 @@ const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     const ids = [
-        'auth-btn', 'generation-counter', 'prompt-input', 
-        'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 
-        'image-preview-container', 'image-preview', 'result-container', 'image-grid', 
-        'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 
-        'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options',
-        // Modals are no longer needed in this mode, but we keep the IDs for easy restoration
-        'auth-modal', 'out-of-credits-modal', 'welcome-credits-modal'
+        'auth-btn', 'google-signin-btn', 'close-modal-btn', 
+        'close-credits-modal-btn', 'close-welcome-modal-btn', 'generation-counter', 
+        'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 
+        'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 
+        'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 
+        'timer', 'background-grid-container', 'background-grid', 'ratio-selector-btn', 
+        'ratio-options', 'modal-overlay'
     ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
-    // Hide auth-related elements
-    if (DOMElements.authBtn) DOMElements.authBtn.style.display = 'none';
-    if (DOMElements.generationCounter) DOMElements.generationCounter.style.display = 'none';
-    const pricingLink = document.querySelector('a[href="pricing.html"]');
-    if(pricingLink) pricingLink.style.display = 'none';
+    // Cache modals separately
+    DOMElements.modals = {
+        auth: document.getElementById('auth-modal'),
+        outOfCredits: document.getElementById('out-of-credits-modal'),
+        welcome: document.getElementById('welcome-credits-modal')
+    };
     
     if (DOMElements.ratioSelectorBtn) {
         originalRatioIconHTML = DOMElements.ratioSelectorBtn.innerHTML;
@@ -55,6 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeEventListeners() {
+    onAuthStateChanged(auth, user => updateUIForAuthState(user));
+    DOMElements.authBtn?.addEventListener('click', handleAuthAction);
+    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal('auth', false));
+    DOMElements.closeCreditsModalBtn?.addEventListener('click', () => toggleModal('outOfCredits', false));
+    DOMElements.closeWelcomeModalBtn?.addEventListener('click', () => toggleModal('welcome', false));
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
@@ -73,7 +83,7 @@ function initializeEventListeners() {
         });
     });
 
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
         if (DOMElements.ratioOptions?.classList.contains('visible')) {
             toggleRatioOptions();
         }
@@ -120,8 +130,65 @@ function appendImageToGrid() {
     galleryImageIndex++;
 }
 
+function toggleModal(modalKey, show) {
+    const modal = DOMElements.modals[modalKey];
+    if (!modal || !DOMElements.modalOverlay) return;
+
+    DOMElements.modalOverlay.classList.toggle('visible', show);
+    
+    // Hide all modals before showing the target one
+    Object.values(DOMElements.modals).forEach(m => m.classList.remove('visible'));
+
+    if (show) {
+        modal.classList.add('visible');
+    }
+}
+
+
+async function updateUIForAuthState(user) {
+    const counter = DOMElements.generationCounter;
+    if (user) {
+        DOMElements.authBtn.textContent = 'Sign Out';
+        try {
+            const token = await user.getIdToken(true);
+            const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!response.ok) throw new Error('Failed to fetch credits');
+            const data = await response.json();
+            currentUserCredits = data.credits;
+            if(counter) counter.textContent = `Credits: ${currentUserCredits}`;
+            if (data.isNewUser) {
+                toggleModal('welcome', true);
+                const freeCreditsEl = document.getElementById('free-credits-amount');
+                if(freeCreditsEl) freeCreditsEl.textContent = data.credits;
+            }
+        } catch (error) {
+            console.error("Error fetching credits:", error);
+            if(counter) counter.textContent = "Credits: Error";
+        }
+    } else {
+        DOMElements.authBtn.textContent = 'Sign In';
+        if(counter) counter.textContent = "";
+        currentUserCredits = 0;
+    }
+}
+
+function handleAuthAction() {
+    auth.currentUser ? signOut(auth).catch(console.error) : toggleModal('auth', true);
+}
+
+function signInWithGoogle() {
+    signInWithPopup(auth, provider)
+      .then(() => toggleModal('auth', false))
+      .catch((error) => {
+            console.error("Google Sign-In Error:", error);
+            alert("Could not sign in with Google. Please check if pop-ups are blocked and try again.");
+      });
+}
+
 async function handleImageGenerationRequest() {
     if (isGenerating) return;
+    if (!auth.currentUser) return toggleModal('auth', true);
+    if (currentUserCredits <= 0) return toggleModal('outOfCredits', true);
     const prompt = DOMElements.promptInput.value.trim();
     if (!prompt && !uploadedImageData) return;
     generateImage(prompt);
@@ -130,16 +197,29 @@ async function handleImageGenerationRequest() {
 async function generateImage(prompt) {
     startLoadingUI();
     try {
-        // NOTE: Authorization headers and credit deduction calls are removed.
+        const token = await auth.currentUser.getIdToken();
+        const deductResponse = await fetch('/api/credits', { 
+            method: 'POST', 
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!deductResponse.ok) {
+            toggleModal('outOfCredits', true);
+            throw new Error('Credit deduction failed');
+        }
+        
+        const creditData = await deductResponse.json();
+        currentUserCredits = creditData.newCredits;
+        if(DOMElements.generationCounter) {
+            DOMElements.generationCounter.textContent = `Credits: ${currentUserCredits}`;
+        }
+
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: currentAspectRatio })
         });
-        if (!generateResponse.ok) {
-             const errorData = await generateResponse.json();
-             throw new Error(errorData.error || 'API generation failed');
-        }
+        if (!generateResponse.ok) throw new Error('API generation failed');
         const result = await generateResponse.json();
         const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
         if (!base64Data) throw new Error("No image data in response");
@@ -147,12 +227,12 @@ async function generateImage(prompt) {
         displayImage(`data:image/png;base64,${base64Data}`, prompt);
     } catch (error) {
         console.error("Generation Error:", error.message);
-        alert(`Sorry, generation failed: ${error.message}`);
         resetUIAfterGeneration();
     } finally {
         stopLoadingUI();
     }
 }
+
 
 function handleImageUpload(event) {
     const file = event.target.files[0];
@@ -275,6 +355,7 @@ function resetUIAfterGeneration() {
     autoResizeTextarea({target: DOMElements.promptInput});
     removeUploadedImage();
     
+    // Reset aspect ratio button
     if (DOMElements.ratioSelectorBtn && originalRatioIconHTML) {
         DOMElements.ratioSelectorBtn.innerHTML = originalRatioIconHTML;
     }
@@ -284,7 +365,9 @@ function resetUIAfterGeneration() {
 }
 
 function startTimer() {
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
     let startTime = Date.now();
     timerInterval = setInterval(() => {
         const elapsedTime = Date.now() - startTime;
