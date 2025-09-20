@@ -258,41 +258,106 @@ function stopLoadingUI() {
     stopTimer();
 }
 
-function displayImage(imageUrl, prompt) {
+/**
+ * Applies a watermark to a given image URL.
+ * @param {string} baseImageUrl The original image data URL.
+ * @returns {Promise<string>} A promise that resolves with the new watermarked image data URL.
+ */
+function applyWatermark(baseImageUrl) {
+    return new Promise((resolve, reject) => {
+        // --- IMPORTANT ---
+        // PASTE THE DIRECT LINK TO YOUR WATERMARK IMAGE HERE
+        const watermarkUrl = 'https://iili.io/KYHoqcG.md.png'; // Example: 'https://example.com/logo.png'
+
+        const mainImage = new Image();
+        mainImage.crossOrigin = 'anonymous';
+        const watermark = new Image();
+        watermark.crossOrigin = 'anonymous';
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        mainImage.onload = () => {
+            watermark.onload = () => {
+                // Set canvas size to match the generated image
+                canvas.width = mainImage.width;
+                canvas.height = mainImage.height;
+
+                // Draw the generated image
+                ctx.drawImage(mainImage, 0, 0);
+
+                // --- Watermark Styling & Positioning ---
+                ctx.globalAlpha = 0.75; // Watermark opacity (from 0.0 to 1.0)
+
+                // Calculate watermark size (e.g., 15% of the main image width)
+                const watermarkWidth = canvas.width * 0.15;
+                const watermarkHeight = watermark.height * (watermarkWidth / watermark.width);
+                
+                // Calculate position (e.g., 2% padding from the bottom-right corner)
+                const padding = canvas.width * 0.02;
+                const x = canvas.width - watermarkWidth - padding;
+                const y = canvas.height - watermarkHeight - padding;
+
+                // Draw the watermark
+                ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
+
+                // Resolve with the new, watermarked image data
+                resolve(canvas.toDataURL('image/png'));
+            };
+            watermark.onerror = reject;
+            watermark.src = watermarkUrl;
+        };
+        mainImage.onerror = reject;
+        mainImage.src = baseImageUrl;
+    });
+}
+
+
+async function displayImage(imageUrl, prompt) {
     DOMElements.loadingIndicator.classList.add('hidden');
-    DOMElements.imageGrid.classList.remove('hidden');
-    DOMElements.imageGrid.innerHTML = ''; 
-    
-    const imgContainer = document.createElement('div');
-    imgContainer.className = 'bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-2 relative group max-w-2xl mx-auto border border-gray-200/80';
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.alt = prompt;
-    img.className = 'w-full h-auto object-contain rounded-xl';
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity';
-    
-    const downloadButton = document.createElement('button');
-    downloadButton.className = "bg-black/50 text-white p-2 rounded-full";
-    downloadButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
-    downloadButton.onclick = () => {
-        const a = document.createElement('a');
-        a.href = imageUrl;
-        a.download = 'genart-image.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    };
+    try {
+        const watermarkedImageUrl = await applyWatermark(imageUrl);
 
-    const closeButton = document.createElement('button');
-    closeButton.className = "bg-black/50 text-white p-2 rounded-full";
-    closeButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-    closeButton.onclick = resetUIAfterGeneration;
+        DOMElements.imageGrid.classList.remove('hidden');
+        DOMElements.imageGrid.innerHTML = ''; 
+        
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-2 relative group max-w-2xl mx-auto border border-gray-200/80';
+        const img = document.createElement('img');
+        img.src = watermarkedImageUrl;
+        img.alt = prompt;
+        img.className = 'w-full h-auto object-contain rounded-xl';
 
-    buttonContainer.append(downloadButton, closeButton);
-    imgContainer.append(img, buttonContainer);
-    DOMElements.imageGrid.appendChild(imgContainer);
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity';
+        
+        const downloadButton = document.createElement('button');
+        downloadButton.className = "bg-black/50 text-white p-2 rounded-full";
+        downloadButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+        downloadButton.onclick = () => {
+            const a = document.createElement('a');
+            a.href = watermarkedImageUrl; // Download the watermarked version
+            a.download = 'genart-image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        const closeButton = document.createElement('button');
+        closeButton.className = "bg-black/50 text-white p-2 rounded-full";
+        closeButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+        closeButton.onclick = resetUIAfterGeneration;
+
+        buttonContainer.append(downloadButton, closeButton);
+        imgContainer.append(img, buttonContainer);
+        DOMElements.imageGrid.appendChild(imgContainer);
+
+    } catch (error) {
+        console.error("Failed to apply watermark:", error);
+        // Fallback to showing the original image if watermarking fails
+        displayImage(imageUrl, prompt); 
+    }
 }
 
 function resetUIAfterGeneration() {
@@ -317,4 +382,5 @@ function startTimer() {
 function stopTimer() {
     clearInterval(timerInterval);
 }
+
 
