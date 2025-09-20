@@ -37,16 +37,23 @@ let currentUserCredits = 0;
 let uploadedImageData = null;
 let isGenerating = false;
 let timerInterval;
+let selectedAspectRatio = '1:1'; // Default aspect ratio
 
 // --- DOM Element Caching ---
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    const ids = ['auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 'close-welcome-modal-btn', 'generation-counter', 'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 'background-grid-container', 'background-grid'];
+    const ids = ['auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 'close-welcome-modal-btn', 'generation-counter', 'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options', 'selected-ratio-text'];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
+    
+    // Get ratio buttons by class
+    DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option-btn');
     
     initializeEventListeners();
     populateBackgroundGrid();
+
+    // Set default active ratio button
+    document.querySelector('.ratio-option-btn[data-ratio="1:1"]')?.classList.add('active');
 });
 
 function initializeEventListeners() {
@@ -64,21 +71,52 @@ function initializeEventListeners() {
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
     DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
+    
+    // Event listeners for ratio selector
+    DOMElements.ratioSelectorBtn?.addEventListener('click', toggleRatioOptions);
+    DOMElements.ratioOptionBtns.forEach(btn => {
+        btn.addEventListener('click', selectRatio);
+    });
+
+    // Close ratio options if clicking outside
+    document.addEventListener('click', (event) => {
+        if (!DOMElements.ratioSelectorBtn.contains(event.target) && !DOMElements.ratioOptions.contains(event.target)) {
+            DOMElements.ratioOptions.classList.add('hidden');
+        }
+    });
 }
 
 // --- Background Grid Logic ---
 function populateBackgroundGrid() {
-    // We create enough images to ensure a long scroll without repetition.
     const imagesToLoad = imageGalleryUrls.length * 2; 
     
     for (let i = 0; i < imagesToLoad; i++) {
         const img = document.createElement('img');
         img.className = 'grid-image';
-        // Loop through the gallery URLs
         img.src = imageGalleryUrls[i % imageGalleryUrls.length];
-        img.loading = 'lazy'; // Improves performance
+        img.loading = 'lazy';
         DOMElements.backgroundGrid.appendChild(img);
     }
+}
+
+// --- Aspect Ratio Functions ---
+function toggleRatioOptions() {
+    DOMElements.ratioOptions?.classList.toggle('hidden');
+}
+
+function selectRatio(event) {
+    const btn = event.currentTarget;
+    selectedAspectRatio = btn.dataset.ratio;
+
+    // Update the text on the main button
+    DOMElements.selectedRatioText.textContent = selectedAspectRatio;
+
+    // Update UI for active class
+    DOMElements.ratioOptionBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Hide the options menu
+    toggleRatioOptions();
 }
 
 
@@ -99,7 +137,7 @@ async function updateUIForAuthState(user) {
     if (user) {
         DOMElements.authBtn.textContent = 'Sign Out';
         try {
-            const token = await user.getIdToken(true); // Force refresh token
+            const token = await user.getIdToken(true);
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) {
                 const errorText = await response.text();
@@ -139,7 +177,6 @@ function signInWithGoogle() {
       })
       .catch(error => {
             console.error("Authentication Error:", error);
-            // Provide feedback to the user. Pop-up blockers are a common issue.
             alert(`Could not sign in with Google. Please ensure pop-ups are not blocked and try again. Error: ${error.message}`);
       });
 }
@@ -170,7 +207,11 @@ async function generateImage(prompt) {
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: '1:1' })
+            body: JSON.stringify({ 
+                prompt, 
+                imageData: uploadedImageData, 
+                aspectRatio: selectedAspectRatio
+            })
         });
         if (!generateResponse.ok) throw new Error('API generation failed');
         
