@@ -4,7 +4,7 @@ body {
     color: #1f2937; /* Tailwind gray-800 */
 }
 
-/* --- Infinite Scrolling Background --- */
+/* --- User-Controlled Scrolling Background --- */
 #background-grid-container {
     position: fixed;
     inset: 0;
@@ -34,8 +34,7 @@ body {
     column-count: 5;
     column-gap: 1.5vw;
     width: 100%;
-    /* Animation: name duration timing-function iteration-count */
-    animation: scroll-vertical 200s linear infinite; /* Increased speed */
+    /* Auto-scroll animation is removed */
 }
 
 .grid-image {
@@ -46,16 +45,6 @@ body {
     object-fit: cover;
     background-color: #e5e7eb; /* Tailwind gray-200 */
     break-inside: avoid; /* Prevents images from breaking across columns */
-}
-
-/* Vertical scroll animation */
-@keyframes scroll-vertical {
-    0% {
-        transform: translateY(0);
-    }
-    100% {
-        transform: translateY(-50%); /* Scrolls exactly one half of the grid height */
-    }
 }
 
 /* --- Sticky Prompt Footer --- */
