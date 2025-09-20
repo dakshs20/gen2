@@ -19,12 +19,6 @@ export default async function handler(req, res) {
 
     try {
         // NOTE: The authentication check has been removed for maintenance mode.
-        // const idToken = req.headers.authorization?.split('Bearer ')[1];
-        // if (!idToken) {
-        //     return res.status(401).json({ error: 'User not authenticated.' });
-        // }
-        // const user = await auth().verifyIdToken(idToken);
-
         const { prompt, imageData, aspectRatio } = req.body;
         
         const apiKey = process.env.GOOGLE_API_KEY;
@@ -59,10 +53,13 @@ export default async function handler(req, res) {
             body: JSON.stringify(payload)
         });
 
+        // --- IMPROVED ERROR HANDLING ---
         if (!apiResponse.ok) {
-            const errorText = await apiResponse.text();
-            console.error("Google API Error:", errorText);
-            return res.status(apiResponse.status).json({ error: `Google API Error: ${errorText}` });
+            // Try to parse the error response from Google for more details.
+            const errorData = await apiResponse.json();
+            const errorMessage = errorData.error?.message || 'An unknown error occurred with the Google API.';
+            console.error("Google API Error:", errorMessage);
+            return res.status(apiResponse.status).json({ error: errorMessage });
         }
 
         const result = await apiResponse.json();
