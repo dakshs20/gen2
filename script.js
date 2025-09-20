@@ -22,8 +22,8 @@ const imageGalleryUrls = [
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
     "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
     "https://iili.io/Fii7T3Q.md.png",
-    "https://iili.io/K7bmj7R.md.png",
-    "https://iili.io/K7bDzpS.md.png",
+    "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
+    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
     "https://iili.io/K7DZCXa.png",
     "https://iili.io/K7DpuDP.png",
     "https://iili.io/K7bH3DN.png",
@@ -85,7 +85,7 @@ function initializeEventListeners() {
 
 // --- Background Grid Logic ---
 function populateBackgroundGrid() {
-    const imagesPerRow = window.innerWidth < 768 ? 3 : 5;
+    const imagesPerRow = window.innerWidth < 768 ? 2 : 5; // Changed to 2 images for mobile
     const numRows = 20;
     let imageIndex = 0;
     for (let i = 0; i < numRows; i++) {
@@ -304,5 +304,4 @@ function startTimer() {
 function stopTimer() {
     clearInterval(timerInterval);
 }
-
 
