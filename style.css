@@ -19,27 +19,22 @@ body {
 }
 
 #background-grid {
-    display: flex;
-    flex-direction: column;
+    /* Using CSS columns for a masonry layout */
+    column-count: 5;
+    column-gap: 1.5vw;
     width: 100%;
     /* Animation: name duration timing-function iteration-count */
     animation: scroll-vertical 240s linear infinite;
 }
 
-.grid-row {
-    display: flex;
-    width: 100%;
-    justify-content: center;
-    gap: 1.5vw;
-}
-
 .grid-image {
-    width: 20vw; /* Responsive width */
-    height: 20vw;
+    width: 100%; /* Image fills the column */
+    height: auto; /* Height adjusts to maintain aspect ratio */
     margin-bottom: 1.5vw;
     border-radius: 1rem; /* Tailwind rounded-2xl */
     object-fit: cover;
     background-color: #e5e7eb; /* Tailwind gray-200 */
+    break-inside: avoid; /* Prevents images from breaking across columns */
 }
 
 /* Vertical scroll animation */
@@ -82,14 +77,33 @@ body {
 
 /* Responsive adjustments for mobile */
 @media (max-width: 768px) {
-    .grid-image {
-        width: 30vw;
-        height: 30vw;
+    #background-grid {
+        column-count: 4; /* 4 columns for mobile */
+        column-gap: 2vw;
+        padding: 0 1vw;
     }
+
+    /* Make the fade more prominent on mobile */
+    #background-grid-container {
+       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+       mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    }
+
     .prompt-footer {
         /* Remove blur on mobile for performance if needed */
         backdrop-filter: none;
         background-color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Adjust padding on the main app container for mobile */
+    #app-container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* Adjust prompt input padding for a better look */
+    .prompt-footer .max-w-3xl {
+        padding: 0.5rem;
     }
 }
 
