@@ -34,6 +34,7 @@ body {
     column-count: 5;
     column-gap: 1.5vw;
     width: 100%;
+    padding: 0 1.5vw; /* Add side padding to match column-gap */
 }
 
 .grid-image {
@@ -61,15 +62,6 @@ body {
 }
 
 /* --- UI State Changes --- */
-#app-container {
-    pointer-events: none; /* Allow scroll and mouse events to pass through */
-}
-
-#app-container > * {
-    pointer-events: auto; /* Re-enable pointer events for direct children of the app container */
-}
-
-
 #background-grid-container.dimmed {
     opacity: 0.1;
     filter: blur(8px);
