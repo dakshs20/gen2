@@ -22,31 +22,18 @@ const imageGalleryUrls = [
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
     "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
     "https://iili.io/Fii7T3Q.md.png",
-    "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
-    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
-    "https://iili.io/K7DZCXa.png",
-    "https://iili.io/K7DpuDP.png",
-    "https://iili.io/K7bH3DN.png",
-    "https://iili.io/K7bdTnS.png",
-    "https://iili.io/K7bdLN4.png",
-    "https://iili.io/K7b2c0X.png",
-    "https://iili.io/K7b2Dmv.png",
-    "https://iili.io/K7bw2v2.png",
-    "https://iili.io/K7bN7Hl.png",
-    "https://iili.io/K7bOTzP.png",
-    "https://iili.io/K7bODhP.png",
-    "https://iili.io/K7be88v.png",
-    "https://iili.io/K7bk3Ku.png",
-    "https://iili.io/K7bvHeR.png",
-    "https://iili.io/K7b894e.png",
-    "https://iili.io/K7brb1I.png",
-    "https://iili.io/K7b4VQR.png",
-    "https://iili.io/K7b696B.png",
-    "https://iili.io/K7b65wG.png",
-    "https://iili.io/K7b6OPV.png",
-    "https://iili.io/K7bP679.png",
-    "https://iili.io/K7biOYP.png",
-    "https://iili.io/K7bs5wg.png"
+    "https://i.ibb.co/9vww0Vp/K7-DZCXa.png", "https://i.ibb.co/Y0Grn3s/K7-Dpu-DP.png",
+    "https://i.ibb.co/n6zJ5H5/K7b-H3-DN.png", "https://i.ibb.co/zGyX2Cr/K7bd-Tn-S.png",
+    "https://i.ibb.co/2MLG97G/K7bd-LN4.png", "https://i.ibb.co/yQnZ1cJ/K7b2c0-X.png",
+    "https://i.ibb.co/3cqx2fD/K7b2-Dmv.png", "https://i.ibb.co/L6L10w1/K7bw2v2.png",
+    "https://i.ibb.co/yB3vY6M/K7b-N7-Hl.png", "https://i.ibb.co/nDM9d8k/K7b-OTz-P.png",
+    "https://i.ibb.co/yqg63vP/K7b-ODh-P.png", "https://i.ibb.co/Y7VzJST/K7be88v.png",
+    "https://i.ibb.co/m5zGCH3/K7bk3-Ku.png", "https://i.ibb.co/yRKg92S/K7bv-He-R.png",
+    "https://i.ibb.co/mXq0kG8/K7b894e.png", "https://i.ibb.co/gDF0jN9/K7brb1-I.png",
+    "https://i.ibb.co/R4m1Pjq/K7b4-VQR.png", "https://i.ibb.co/mhpkGzP/K7b696-B.png",
+    "https://i.ibb.co/hLqg4qY/K7b65w-G.png", "https://i.ibb.co/mS2nJc1/K7b6-OPV.png",
+    "https://i.ibb.co/P4N4B2C/K7b-P679.png", "https://i.ibb.co/fnyxG2j/K7bi-OYP.png",
+    "https://i.ibb.co/VWVjVfQ/K7bs5wg.png"
 ];
 
 // --- Global State ---
@@ -85,24 +72,19 @@ function initializeEventListeners() {
 
 // --- Background Grid Logic ---
 function populateBackgroundGrid() {
-    const imagesPerRow = window.innerWidth < 768 ? 2 : 5; // Changed to 2 images for mobile
-    const numRows = 20;
-    let imageIndex = 0;
-    for (let i = 0; i < numRows; i++) {
-        const row = document.createElement('div');
-        row.className = 'grid-row';
-        for (let j = 0; j < imagesPerRow; j++) {
-            const img = document.createElement('img');
-            img.className = 'grid-image';
-            img.src = imageGalleryUrls[imageIndex % imageGalleryUrls.length];
-            img.loading = 'lazy';
-            row.appendChild(img);
-            imageIndex++;
-        }
-        DOMElements.backgroundGrid.appendChild(row);
+    // We create enough images to ensure a long scroll without repetition.
+    const imagesToLoad = imageGalleryUrls.length * 2; 
+    
+    for (let i = 0; i < imagesToLoad; i++) {
+        const img = document.createElement('img');
+        img.className = 'grid-image';
+        // Loop through the gallery URLs
+        img.src = imageGalleryUrls[i % imageGalleryUrls.length];
+        img.loading = 'lazy'; // Improves performance
+        DOMElements.backgroundGrid.appendChild(img);
     }
-    DOMElements.backgroundGrid.innerHTML += DOMElements.backgroundGrid.innerHTML;
 }
+
 
 // --- Core App Logic (Authentication, Credits, Generation) ---
 function toggleModal(modal, show) {
@@ -156,8 +138,14 @@ function handleAuthAction() {
 
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
-      .then(() => toggleModal(DOMElements.authModal, false))
-      .catch(console.error);
+      .then(() => {
+        toggleModal(DOMElements.authModal, false);
+      })
+      .catch(error => {
+            console.error("Authentication Error:", error);
+            // Provide feedback to the user. Pop-up blockers are a common issue.
+            alert(`Could not sign in with Google. Please ensure pop-ups are not blocked and try again. Error: ${error.message}`);
+      });
 }
 
 async function handleImageGenerationRequest() {
