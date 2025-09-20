@@ -104,7 +104,7 @@ body {
     /* --- Other Mobile Styles --- */
     .prompt-footer {
         backdrop-filter: none;
-        background-color: rgba(255, 255, 255, 0.95);
+        background-color: transparent; /* Removed the white background bar */
     }
 
     #app-container {
