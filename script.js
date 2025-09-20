@@ -1,6 +1,7 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -14,10 +15,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app); // Initialize Firestore
 const provider = new GoogleAuthProvider();
 
-// --- IMPORTANT: ADD YOUR IMAGE LINKS HERE ---
-const imageGalleryUrls = [
+// --- IMPORTANT: This array now serves as a fallback ---
+const fallbackImageUrls = [
     "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png", 
     "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", 
     "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png", 
@@ -50,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
     initializeEventListeners();
-    populateBackgroundGrid();
+    listenForSharedImages(); // New function to load the gallery
 });
 
 function initializeEventListeners() {
@@ -87,11 +89,36 @@ function initializeEventListeners() {
     });
 }
 
-// --- Background Grid Logic ---
-function populateBackgroundGrid() {
+// --- NEW: Background Grid Logic with Firestore ---
+function listenForSharedImages() {
     const grid = DOMElements.backgroundGrid;
     if (!grid) return;
-    imageGalleryUrls.forEach(url => {
+
+    // Start with the fallback images for a nice loading state
+    populateGrid(fallbackImageUrls); 
+
+    const q = query(collection(db, "shared_images"), orderBy("createdAt", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+        const imageUrls = [];
+        snapshot.forEach((doc) => {
+            imageUrls.push(doc.data().imageUrl);
+        });
+        
+        // If we got images from the database, use them. Otherwise, keep the fallbacks.
+        if (imageUrls.length > 0) {
+            populateGrid(imageUrls);
+        }
+    }, (error) => {
+        console.error("Error fetching shared images: ", error);
+        // If there's an error, we still have the fallback images displayed.
+    });
+}
+
+function populateGrid(urls) {
+    const grid = DOMElements.backgroundGrid;
+    grid.innerHTML = ''; // Clear previous images
+    urls.forEach(url => {
         const img = document.createElement('img');
         img.className = 'grid-image';
         img.src = url;
@@ -267,7 +294,7 @@ function applyWatermark(baseImageUrl) {
     return new Promise((resolve, reject) => {
         // --- IMPORTANT ---
         // PASTE THE DIRECT LINK TO YOUR WATERMARK IMAGE HERE
-        const watermarkUrl = 'https://iili.io/KYHoqcG.md.png'; // Example: 'https://example.com/logo.png'
+        const watermarkUrl = 'https://iili.io/FsAoG2I.md.png'; // Example: 'https://example.com/logo.png'
 
         const mainImage = new Image();
         mainImage.crossOrigin = 'anonymous';
@@ -343,13 +370,20 @@ async function displayImage(imageUrl, prompt) {
             a.click();
             document.body.removeChild(a);
         };
+        
+        // --- NEW: Share Button ---
+        const shareButton = document.createElement('button');
+        shareButton.className = "bg-black/50 text-white p-2 rounded-full";
+        shareButton.title = "Share to Everyone";
+        shareButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>`;
+        shareButton.onclick = () => shareImage(watermarkedImageUrl, shareButton);
 
         const closeButton = document.createElement('button');
         closeButton.className = "bg-black/50 text-white p-2 rounded-full";
         closeButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
         closeButton.onclick = resetUIAfterGeneration;
 
-        buttonContainer.append(downloadButton, closeButton);
+        buttonContainer.append(downloadButton, shareButton, closeButton);
         imgContainer.append(img, buttonContainer);
         DOMElements.imageGrid.appendChild(imgContainer);
 
@@ -357,6 +391,43 @@ async function displayImage(imageUrl, prompt) {
         console.error("Failed to apply watermark:", error);
         // Fallback to showing the original image if watermarking fails
         displayImage(imageUrl, prompt); 
+    }
+}
+
+// --- NEW: Share Image Function ---
+async function shareImage(imageDataUrl, button) {
+    if (!auth.currentUser) {
+        toggleModal(DOMElements.authModal, true);
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '...'; // Simple loading indicator
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/share', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ imageDataUrl })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to share the image.');
+        }
+        
+        // Change icon to a checkmark on success
+        button.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+    } catch (error) {
+        console.error("Sharing Error:", error);
+        alert("Sorry, we couldn't share your image at this time.");
+        // Re-enable button and restore icon on failure
+        button.disabled = false;
+        button.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>`;
     }
 }
 
@@ -382,5 +453,4 @@ function startTimer() {
 function stopTimer() {
     clearInterval(timerInterval);
 }
-
 
