@@ -11,8 +11,19 @@ body {
     width: 100%;
     height: 100%;
     z-index: 0;
-    overflow: hidden;
-    /* This mask creates the fade effect at the top and bottom */
+    overflow-y: scroll; /* Allow user scrolling */
+    /* Hide scrollbar for a cleaner look */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+#background-grid-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+}
+
+
+/* This mask creates the fade effect at the top and bottom */
+#background-grid-container {
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
     transition: opacity 0.5s ease, filter 0.5s ease;
@@ -24,7 +35,7 @@ body {
     column-gap: 1.5vw;
     width: 100%;
     /* Animation: name duration timing-function iteration-count */
-    animation: scroll-vertical 240s linear infinite;
+    animation: scroll-vertical 200s linear infinite; /* Increased speed */
 }
 
 .grid-image {
@@ -78,7 +89,7 @@ body {
 /* Responsive adjustments for mobile */
 @media (max-width: 768px) {
     #background-grid {
-        column-count: 4; /* 4 columns for mobile */
+        column-count: 2; /* 2 columns for mobile masonry */
         column-gap: 2vw;
         padding: 0 1vw;
     }
