@@ -56,8 +56,8 @@ body {
 /* --- Aspect Ratio Selector --- */
 .ratio-options-container {
     position: absolute;
-    bottom: calc(100% + 0.5rem);
-    left: 0;
+    bottom: calc(100% + 0.5rem); /* Position above the prompt container */
+    right: 0; /* Align to the right side */
     background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     border-radius: 1rem;
@@ -70,7 +70,7 @@ body {
     visibility: hidden;
     transform: translateY(10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-    transform-origin: bottom left;
+    transform-origin: bottom right;
 }
 
 .ratio-options-container.visible {
