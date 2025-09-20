@@ -18,42 +18,41 @@ const provider = new GoogleAuthProvider();
 
 // --- IMPORTANT: ADD YOUR IMAGE LINKS HERE ---
 const imageGalleryUrls = [
+    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png", 
+    "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", 
+    "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png", 
+    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", "https://iili.io/K7bP679.md.png",
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
-    "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
-    "https://iili.io/Fii7T3Q.md.png", "https://iili.io/K7bN7Hl.md.png", 
-    "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", 
-    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", 
-    "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", 
-    "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png", 
-    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", 
-    "https://iili.io/K7bs5wg.md.png", "https://iili.io/K7bDzpS.md.png", 
-    "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", 
-    "https://iili.io/K7bP679.md.png"
+    "https://i.ibb.co/b3bxtK3/K7-DZCXa.png", "https://i.ibb.co/hX4P1P9/K7-Dpu-DP.png", "https://i.ibb.co/yQW2YwL/K7b-H3-DN.png", "https://i.ibb.co/hM4Qz1q/K7bd-Tn-S.png",
+    "https://i.ibb.co/dKFNJtC/K7bd-LN4.png", "https://i.ibb.co/PggYJ4s/K7b2c0-X.png", "https://i.ibb.co/3k5gGz8/K7b2-Dmv.png"
 ];
+
 
 // --- Global State ---
 let currentUserCredits = 0;
 let uploadedImageData = null;
 let isGenerating = false;
 let timerInterval;
-let selectedAspectRatio = '1:1'; // Default aspect ratio
+let currentAspectRatio = '1:1'; // Default aspect ratio
 
 // --- DOM Element Caching ---
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    const ids = ['auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 'close-welcome-modal-btn', 'generation-counter', 'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options', 'selected-ratio-text'];
+    const ids = [
+        'auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 
+        'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 
+        'close-welcome-modal-btn', 'generation-counter', 'prompt-input', 
+        'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 
+        'image-preview-container', 'image-preview', 'result-container', 'image-grid', 
+        'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 
+        'background-grid-container', 'background-grid', 'ratio-selector-btn', 'ratio-options'
+    ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
-    
-    // Get ratio buttons by class
-    DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option-btn');
     
     initializeEventListeners();
     populateBackgroundGrid();
-
-    // Set default active ratio button
-    document.querySelector('.ratio-option-btn[data-ratio="1:1"]')?.classList.add('active');
 });
 
 function initializeEventListeners() {
@@ -71,52 +70,36 @@ function initializeEventListeners() {
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
     DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
-    
-    // Event listeners for ratio selector
-    DOMElements.ratioSelectorBtn?.addEventListener('click', toggleRatioOptions);
-    DOMElements.ratioOptionBtns.forEach(btn => {
-        btn.addEventListener('click', selectRatio);
+
+    // --- Aspect Ratio Selector Listeners ---
+    DOMElements.ratioSelectorBtn?.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents the document click listener from closing it immediately
+        toggleRatioOptions();
     });
 
-    // Close ratio options if clicking outside
-    document.addEventListener('click', (event) => {
-        if (!DOMElements.ratioSelectorBtn.contains(event.target) && !DOMElements.ratioOptions.contains(event.target)) {
-            DOMElements.ratioOptions.classList.add('hidden');
+    document.querySelectorAll('.ratio-option-box').forEach(box => {
+        box.addEventListener('click', selectRatio);
+    });
+
+    // Global listener to close the ratio options when clicking outside
+    document.addEventListener('click', () => {
+        if (DOMElements.ratioOptions?.classList.contains('visible')) {
+            toggleRatioOptions();
         }
     });
 }
 
 // --- Background Grid Logic ---
 function populateBackgroundGrid() {
-    const imagesToLoad = imageGalleryUrls.length * 2; 
-    
-    for (let i = 0; i < imagesToLoad; i++) {
+    const grid = DOMElements.backgroundGrid;
+    if (!grid) return;
+    imageGalleryUrls.forEach(url => {
         const img = document.createElement('img');
         img.className = 'grid-image';
-        img.src = imageGalleryUrls[i % imageGalleryUrls.length];
+        img.src = url;
         img.loading = 'lazy';
-        DOMElements.backgroundGrid.appendChild(img);
-    }
-}
-
-// --- Aspect Ratio Functions ---
-function toggleRatioOptions() {
-    DOMElements.ratioOptions?.classList.toggle('hidden');
-}
-
-function selectRatio(event) {
-    const btn = event.currentTarget;
-    selectedAspectRatio = btn.dataset.ratio;
-
-    // Update the text on the main button
-    DOMElements.selectedRatioText.textContent = selectedAspectRatio;
-
-    // Update UI for active class
-    DOMElements.ratioOptionBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    
-    // Hide the options menu
-    toggleRatioOptions();
+        grid.appendChild(img);
+    });
 }
 
 
@@ -139,10 +122,7 @@ async function updateUIForAuthState(user) {
         try {
             const token = await user.getIdToken(true);
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to fetch credits: ${errorText}`);
-            }
+            if (!response.ok) throw new Error('Failed to fetch credits');
             const data = await response.json();
             currentUserCredits = data.credits;
             if(counter) counter.textContent = `Credits: ${currentUserCredits}`;
@@ -152,7 +132,7 @@ async function updateUIForAuthState(user) {
                 toggleModal(DOMElements.welcomeCreditsModal, true);
             }
         } catch (error) {
-            console.error("Critical error fetching credits:", error);
+            console.error("Error fetching credits:", error);
             if(counter) counter.textContent = "Credits: Error";
         }
     } else {
@@ -172,12 +152,10 @@ function handleAuthAction() {
 
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
-      .then(() => {
-        toggleModal(DOMElements.authModal, false);
-      })
-      .catch(error => {
-            console.error("Authentication Error:", error);
-            alert(`Could not sign in with Google. Please ensure pop-ups are not blocked and try again. Error: ${error.message}`);
+      .then(() => toggleModal(DOMElements.authModal, false))
+      .catch((error) => {
+            console.error("Google Sign-In Error:", error);
+            alert("Could not sign in with Google. Please check if pop-ups are blocked and try again.");
       });
 }
 
@@ -207,11 +185,7 @@ async function generateImage(prompt) {
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ 
-                prompt, 
-                imageData: uploadedImageData, 
-                aspectRatio: selectedAspectRatio
-            })
+            body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: currentAspectRatio })
         });
         if (!generateResponse.ok) throw new Error('API generation failed');
         
@@ -255,6 +229,22 @@ function autoResizeTextarea(e) {
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
 }
+
+// --- Aspect Ratio Functions ---
+function toggleRatioOptions() {
+    DOMElements.ratioOptions?.classList.toggle('visible');
+}
+
+function selectRatio(event) {
+    const selectedBox = event.currentTarget;
+    currentAspectRatio = selectedBox.dataset.ratio;
+
+    document.querySelectorAll('.ratio-option-box').forEach(box => box.classList.remove('active'));
+    selectedBox.classList.add('active');
+    
+    // The menu is closed by the global click listener, which this click will trigger.
+}
+
 
 function startLoadingUI() {
     isGenerating = true;
