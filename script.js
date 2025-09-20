@@ -17,19 +17,13 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 // --- IMPORTANT: ADD YOUR IMAGE LINKS HERE ---
-// Add as many image URLs as you want to this list for the background.
 const imageGalleryUrls = [
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
     "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
     "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
     "https://iili.io/Fii7T3Q.md.png",
-    // Add more of your best images here to make the grid look great!
-    // For example:
     "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
-    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
-    "https://images.unsplash.com/photo-1664089206893-ab1a72ae9a1a?q=80&w=1200",
-    "https://images.unsplash.com/photo-1663430886043-1430f80b8eba?q=80&w=1200",
-    "https://images.unsplash.com/photo-1662953293883-2070382348dd?q=80&w=1200"
+    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200"
 ];
 
 // --- Global State ---
@@ -42,7 +36,6 @@ let timerInterval;
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Cache all DOM elements
     const ids = ['auth-btn', 'auth-modal', 'google-signin-btn', 'close-modal-btn', 'out-of-credits-modal', 'close-credits-modal-btn', 'welcome-credits-modal', 'close-welcome-modal-btn', 'generation-counter', 'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 'timer', 'background-grid-container', 'background-grid'];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
@@ -72,7 +65,6 @@ function populateBackgroundGrid() {
     const imagesPerRow = window.innerWidth < 768 ? 3 : 5;
     const numRows = 20;
     let imageIndex = 0;
-
     for (let i = 0; i < numRows; i++) {
         const row = document.createElement('div');
         row.className = 'grid-row';
@@ -92,8 +84,13 @@ function populateBackgroundGrid() {
 // --- Core App Logic (Authentication, Credits, Generation) ---
 function toggleModal(modal, show) {
     if (!modal) return;
-    if (show) modal.classList.remove('opacity-0', 'invisible');
-    else modal.classList.add('opacity-0', 'invisible');
+    if (show) {
+        modal.classList.remove('opacity-0', 'invisible');
+        modal.setAttribute('aria-hidden', 'false');
+    } else {
+        modal.classList.add('opacity-0', 'invisible');
+        modal.setAttribute('aria-hidden', 'true');
+    }
 }
 
 async function updateUIForAuthState(user) {
@@ -101,30 +98,43 @@ async function updateUIForAuthState(user) {
     if (user) {
         DOMElements.authBtn.textContent = 'Sign Out';
         try {
-            const token = await user.getIdToken();
+            const token = await user.getIdToken(true); // Force refresh token
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) throw new Error('Failed to fetch credits');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch credits: ${errorText}`);
+            }
             const data = await response.json();
             currentUserCredits = data.credits;
             if(counter) counter.textContent = `Credits: ${currentUserCredits}`;
-            if (data.isNewUser) toggleModal(DOMElements.welcomeCreditsModal, true);
+            if (data.isNewUser) {
+                const freeCreditsEl = document.getElementById('free-credits-amount');
+                if(freeCreditsEl) freeCreditsEl.textContent = data.credits;
+                toggleModal(DOMElements.welcomeCreditsModal, true);
+            }
         } catch (error) {
-            console.error(error);
-            if(counter) counter.textContent = "Credits: -";
+            console.error("Critical error fetching credits:", error);
+            if(counter) counter.textContent = "Credits: Error";
         }
     } else {
         DOMElements.authBtn.textContent = 'Sign In';
         if(counter) counter.textContent = "";
+        currentUserCredits = 0;
     }
 }
 
 function handleAuthAction() {
-    if (auth.currentUser) signOut(auth);
-    else toggleModal(DOMElements.authModal, true);
+    if (auth.currentUser) {
+        signOut(auth).catch(console.error);
+    } else {
+        toggleModal(DOMElements.authModal, true);
+    }
 }
 
 function signInWithGoogle() {
-    signInWithPopup(auth, provider).then(() => toggleModal(DOMElements.authModal, false)).catch(console.error);
+    signInWithPopup(auth, provider)
+      .then(() => toggleModal(DOMElements.authModal, false))
+      .catch(console.error);
 }
 
 async function handleImageGenerationRequest() {
@@ -162,7 +172,7 @@ async function generateImage(prompt) {
         if (!base64Data) throw new Error("No image data in response");
         
         displayImage(`data:image/png;base64,${base64Data}`, prompt);
-        updateUIForAuthState(auth.currentUser);
+        await updateUIForAuthState(auth.currentUser);
 
     } catch (error) {
         console.error("Generation Error:", error);
@@ -230,7 +240,14 @@ function displayImage(imageUrl, prompt) {
     const downloadButton = document.createElement('button');
     downloadButton.className = "bg-black/50 text-white p-2 rounded-full";
     downloadButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
-    downloadButton.onclick = () => { /* ... existing download logic ... */ };
+    downloadButton.onclick = () => {
+        const a = document.createElement('a');
+        a.href = imageUrl;
+        a.download = 'genart-image.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
 
     const closeButton = document.createElement('button');
     closeButton.className = "bg-black/50 text-white p-2 rounded-full";
@@ -255,9 +272,9 @@ function startTimer() {
     let startTime = Date.now();
     timerInterval = setInterval(() => {
         const elapsedTime = Date.now() - startTime;
-        DOMElements.timer.textContent = `${(elapsedTime / 1000).toFixed(1)}s`;
-        const progress = Math.min(elapsedTime / 17000, 1); // 17 seconds average
-        DOMElements.progressBar.style.width = `${progress * 100}%`;
+        if(DOMElements.timer) DOMElements.timer.textContent = `${(elapsedTime / 1000).toFixed(1)}s`;
+        const progress = Math.min(elapsedTime / 17000, 1); 
+        if(DOMElements.progressBar) DOMElements.progressBar.style.width = `${progress * 100}%`;
     }, 100);
 }
 
