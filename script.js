@@ -30,7 +30,15 @@ const imageGalleryUrls = [
     "https://iili.io/K7bdTnS.png",
     "https://iili.io/K7bdLN4.png",
     "https://iili.io/K7b2c0X.png",
-    "https://iili.io/K7b2Dmv.png"
+    "https://iili.io/K7b2Dmv.png",
+    "https://iili.io/K7bw2v2.png",
+    "https://iili.io/K7bN7Hl.png",
+    "https://iili.io/K7bOTzP.png",
+    "https://iili.io/K7bODhP.png",
+    "https://iili.io/K7be88v.png",
+    "https://iili.io/K7bk3Ku.png",
+    "https://iili.io/K7bvHeR.png",
+    "https://iili.io/K7b894e.png"
 ];
 
 // --- Global State ---
