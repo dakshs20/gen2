@@ -85,30 +85,28 @@ body {
 
 /* --- Responsive adjustments for mobile --- */
 @media (max-width: 768px) {
-    /* --- Mobile "Reels" View --- */
     #background-grid-container {
-       /* Add scroll snapping for the reel effect */
-       scroll-snap-type: y mandatory;
+       /* Improve scrolling performance on iOS */
+       -webkit-overflow-scrolling: touch;
        /* Make the fade more prominent on mobile */
        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
        mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
     }
 
     #background-grid {
-        /* Reset masonry layout for mobile, use single column */
+        /* Use a single column for a standard vertical scroll */
         column-count: 1;
         column-gap: 0;
-        padding: 0;
+        padding: 0 2vw; /* Add some side padding */
     }
 
     .grid-image {
-        /* Make each image a full-screen "reel" */
+        /* Preserve original aspect ratio */
         width: 100%;
-        height: 100vh; /* Full viewport height */
-        margin-bottom: 0; /* No margin between images */
-        border-radius: 0; /* No rounded corners for full-screen */
-        scroll-snap-align: start; /* Snap to the start of each image */
-        object-fit: cover; /* Cover the screen without stretching */
+        height: auto; 
+        /* Add vertical spacing between images */
+        margin-bottom: 2vw;
+        border-radius: 1rem; /* Re-add rounded corners */
     }
 
     /* --- Other Mobile Styles --- */
