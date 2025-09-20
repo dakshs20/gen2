@@ -4,48 +4,34 @@ body {
     color: #1f2937; /* Tailwind gray-800 */
 }
 
-/* --- User-Controlled Scrolling Background --- */
+/* --- Masonry Background --- */
 #background-grid-container {
     position: fixed;
     inset: 0;
     width: 100%;
     height: 100%;
     z-index: 0;
-    overflow-y: scroll; /* Allow user scrolling */
-    /* Hide scrollbar for a cleaner look */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-
-#background-grid-container::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
-}
-
-
-/* This mask creates the fade effect at the top and bottom */
-#background-grid-container {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
     transition: opacity 0.5s ease, filter 0.5s ease;
 }
 
 #background-grid {
-    /* Using CSS columns for a masonry layout on desktop */
     column-count: 5;
-    column-gap: 1.5vw;
-    width: 100%;
-    padding: 0 1.5vw; /* Add side padding to match column-gap */
+    column-gap: 1rem;
+    padding: 1rem;
 }
 
 .grid-image {
-    width: 100%; /* Image fills the column */
-    height: auto; /* Height adjusts to maintain aspect ratio */
-    margin-bottom: 1.5vw;
-    border-radius: 1rem; /* Tailwind rounded-2xl */
+    width: 100%;
+    height: auto;
+    margin-bottom: 1rem;
+    border-radius: 1rem;
     object-fit: cover;
-    background-color: #e5e7eb; /* Tailwind gray-200 */
+    background-color: #e5e7eb;
     break-inside: avoid; /* Prevents images from breaking across columns */
 }
+
 
 /* --- Sticky Prompt Footer --- */
 .prompt-footer {
@@ -58,7 +44,7 @@ body {
 
 #prompt-input {
     min-height: 48px;
-    max-height: 200px; /* Prevent it from getting too tall */
+    max-height: 200px;
 }
 
 /* --- UI State Changes --- */
@@ -67,53 +53,79 @@ body {
     filter: blur(8px);
 }
 
-/* Modal transition styles */
-#auth-modal[aria-hidden="false"],
-#out-of-credits-modal[aria-hidden="false"],
-#welcome-credits-modal[aria-hidden="false"] {
-    opacity: 1;
-    visibility: visible;
+/* --- Aspect Ratio Selector --- */
+.ratio-options-container {
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    right: 0;
+    width: 200px;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 1rem;
+    border: 1px solid rgba(229, 231, 235, 0.9);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    transform-origin: bottom right;
 }
 
-/* --- Responsive adjustments for mobile --- */
+.ratio-options-container.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.ratio-option-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.ratio-option-btn:hover {
+    background-color: #f3f4f6; /* gray-100 */
+}
+
+.ratio-option-btn.active {
+    background-color: #dbeafe; /* blue-100 */
+}
+
+.ratio-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1f2937; /* gray-800 */
+}
+
+.ratio-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280; /* gray-500 */
+}
+
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    #background-grid-container {
-       /* Improve scrolling performance on iOS */
-       -webkit-overflow-scrolling: touch;
-       /* Make the fade more prominent and correctly positioned on mobile */
-       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 80%, transparent 95%);
-       mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 80%, transparent 95%);
-    }
-
     #background-grid {
-        /* Use a single column for a standard vertical scroll */
-        column-count: 1;
-        column-gap: 0;
-        padding: 0 2vw; /* Add some side padding */
+        column-count: 2;
     }
-
-    .grid-image {
-        /* Preserve original aspect ratio */
-        width: 100%;
-        height: auto; 
-        /* Add vertical spacing between images */
-        margin-bottom: 2vw;
-        border-radius: 1rem; /* Re-add rounded corners */
-    }
-
-    /* --- Other Mobile Styles --- */
     .prompt-footer {
         backdrop-filter: none;
-        background-color: transparent; /* Removed the white background bar */
     }
-
-    #app-container {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+    #background-grid-container {
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%);
     }
-
-    .prompt-footer .max-w-3xl {
-        padding: 0.5rem;
+    .prompt-footer .bg-white\\/80 {
+        background-color: transparent;
     }
 }
 
