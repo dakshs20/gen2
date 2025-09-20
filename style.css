@@ -30,11 +30,10 @@ body {
 }
 
 #background-grid {
-    /* Using CSS columns for a masonry layout */
+    /* Using CSS columns for a masonry layout on desktop */
     column-count: 5;
     column-gap: 1.5vw;
     width: 100%;
-    /* Auto-scroll animation is removed */
 }
 
 .grid-image {
@@ -62,6 +61,15 @@ body {
 }
 
 /* --- UI State Changes --- */
+#app-container {
+    pointer-events: none; /* Allow scroll and mouse events to pass through */
+}
+
+#app-container > * {
+    pointer-events: auto; /* Re-enable pointer events for direct children of the app container */
+}
+
+
 #background-grid-container.dimmed {
     opacity: 0.1;
     filter: blur(8px);
@@ -75,33 +83,45 @@ body {
     visibility: visible;
 }
 
-/* Responsive adjustments for mobile */
+/* --- Responsive adjustments for mobile --- */
 @media (max-width: 768px) {
-    #background-grid {
-        column-count: 2; /* 2 columns for mobile masonry */
-        column-gap: 2vw;
-        padding: 0 1vw;
-    }
-
-    /* Make the fade more prominent on mobile */
+    /* --- Mobile "Reels" View --- */
     #background-grid-container {
+       /* Add scroll snapping for the reel effect */
+       scroll-snap-type: y mandatory;
+       /* Make the fade more prominent on mobile */
        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
        mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
     }
 
+    #background-grid {
+        /* Reset masonry layout for mobile, use single column */
+        column-count: 1;
+        column-gap: 0;
+        padding: 0;
+    }
+
+    .grid-image {
+        /* Make each image a full-screen "reel" */
+        width: 100%;
+        height: 100vh; /* Full viewport height */
+        margin-bottom: 0; /* No margin between images */
+        border-radius: 0; /* No rounded corners for full-screen */
+        scroll-snap-align: start; /* Snap to the start of each image */
+        object-fit: cover; /* Cover the screen without stretching */
+    }
+
+    /* --- Other Mobile Styles --- */
     .prompt-footer {
-        /* Remove blur on mobile for performance if needed */
         backdrop-filter: none;
         background-color: rgba(255, 255, 255, 0.95);
     }
 
-    /* Adjust padding on the main app container for mobile */
     #app-container {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
 
-    /* Adjust prompt input padding for a better look */
     .prompt-footer .max-w-3xl {
         padding: 0.5rem;
     }
