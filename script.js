@@ -219,7 +219,13 @@ async function generateImage(prompt) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: currentAspectRatio })
         });
-        if (!generateResponse.ok) throw new Error('API generation failed');
+
+        if (!generateResponse.ok) {
+            const errorData = await generateResponse.json();
+            const errorMessage = errorData.error || 'An unknown server error occurred.';
+            throw new Error(errorMessage);
+        }
+
         const result = await generateResponse.json();
         const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
         if (!base64Data) throw new Error("No image data in response");
@@ -227,6 +233,7 @@ async function generateImage(prompt) {
         displayImage(`data:image/png;base64,${base64Data}`, prompt);
     } catch (error) {
         console.error("Generation Error:", error.message);
+        alert(`Sorry, generation failed: ${error.message}`);
         resetUIAfterGeneration();
     } finally {
         stopLoadingUI();
