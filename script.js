@@ -23,8 +23,14 @@ const imageGalleryUrls = [
     "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
     "https://iili.io/Fii7T3Q.md.png",
     "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
-    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200"
-    "https://freeimage.host/i/K7DZCXa"
+    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
+    "https://freeimage.host/i/K7DZCXa",
+    "https://freeimage.host/i/K7DpuDP",
+    "https://freeimage.host/i/K7bH3DN",
+    "https://freeimage.host/i/K7bdTnS",
+    "https://freeimage.host/i/K7bdLN4",
+    "https://freeimage.host/i/K7b2c0X",
+    "https://freeimage.host/i/K7b2Dmv"
 ];
 
 // --- Global State ---
@@ -282,5 +288,3 @@ function startTimer() {
 function stopTimer() {
     clearInterval(timerInterval);
 }
-
-
