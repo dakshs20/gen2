@@ -18,17 +18,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// --- Gallery Image URLs ---
-const imageGalleryUrls = [
-    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png",
-    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png",
-    "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png",
-    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png",
-    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png",
-    "https://iili.io/K7bP679.md.png"
-];
-
 // --- Global State ---
+let currentUser;
 let currentUserCredits = 0;
 let isGenerating = false;
 let currentAspectRatio = '1:1';
@@ -37,16 +28,12 @@ let page = 0;
 
 // Demo images for infinite scroll
 const ALL_IMAGE_URLS = [
-    "https://images.unsplash.com/photo-1679872365319-586320090333?q=80&w=1887",
-    "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
-    "https://images.unsplash.com/photo-1681237303538-20835848e02c?q=80&w=1887",
-    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
-    "https://images.unsplash.com/photo-1678221889498-318e815144b2?q=80&w=1887",
-    "https://images.unsplash.com/photo-1674391678438-232130351722?q=80&w=1887",
-    "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
-    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
-    "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
-    "https://iili.io/Fii7T3Q.md.png",
+    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png",
+    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png",
+    "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png",
+    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png",
+    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png",
+    "https://iili.io/K7bP679.md.png"
 ];
 
 
@@ -275,5 +262,6 @@ function toggleModal(modal, show) {
 function closeAllModals() {
     [DOMElements.authModal, DOMElements.outOfCreditsModal].forEach(modal => toggleModal(modal, false));
 }
+
 
 
