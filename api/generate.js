@@ -15,7 +15,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// --- Function to log generation data for analytics ---
+// --- Function to save prompt data ---
 async function logGeneration(userId, prompt) {
     try {
         await db.collection('generations').add({
@@ -36,32 +36,44 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 1. Authenticate the user
         const idToken = req.headers.authorization?.split('Bearer ')[1];
         if (!idToken) {
             return res.status(401).json({ error: 'User not authenticated.' });
         }
         const user = await auth().verifyIdToken(idToken);
 
-        // 2. Get prompt and aspect ratio from the request
-        const { prompt, aspectRatio } = req.body;
+        const { prompt, imageData, aspectRatio } = req.body;
         
-        // 3. Log the generation attempt for analytics
         await logGeneration(user.uid, prompt);
 
-        // 4. Prepare the API request for Google's Image Generation Model
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return res.status(500).json({ error: "Server configuration error: API key not found." });
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-        const payload = { 
-            instances: [{ prompt }], 
-            parameters: { "sampleCount": 1, "aspectRatio": aspectRatio || "1:1" }
-        };
+        let apiUrl, payload;
 
-        // 5. Call the external API
+        if (imageData && imageData.data) {
+            // --- Image-to-Image Logic ---
+            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+            payload = {
+                "contents": [{ 
+                    "parts": [
+                        { "text": prompt }, 
+                        { "inlineData": { "mimeType": imageData.mimeType, "data": imageData.data } }
+                    ] 
+                }],
+                "generationConfig": { "responseModalities": ["IMAGE"] }
+            };
+        } else {
+            // --- Text-to-Image Logic ---
+            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            payload = { 
+                instances: [{ prompt }], 
+                parameters: { "sampleCount": 1, "aspectRatio": aspectRatio || "1:1" }
+            };
+        }
+
         const apiResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -74,7 +86,6 @@ export default async function handler(req, res) {
             return res.status(apiResponse.status).json({ error: `Google API Error: ${errorText}` });
         }
 
-        // 6. Send the result back to the client
         const result = await apiResponse.json();
         res.status(200).json(result);
 
@@ -83,3 +94,4 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'The API function crashed.', details: error.message });
     }
 }
+
