@@ -37,10 +37,18 @@
     <footer class="fixed bottom-0 left-0 right-0 p-4 z-50">
         <div class="max-w-3xl mx-auto">
             <div class="bg-white/50 backdrop-blur-2xl border border-white/20 shadow-xl rounded-full p-2.5 flex items-center gap-2">
+                <button id="image-upload-btn" class="p-2.5 rounded-full hover:bg-gray-200 transition-colors flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+                <input type="file" id="image-upload-input" class="hidden" accept="image/png, image/jpeg">
+                <div id="image-preview-container" class="hidden relative w-10 h-10 flex-shrink-0">
+                    <img id="image-preview" class="w-full h-full object-cover rounded-lg" src="" alt="Image preview">
+                    <button id="remove-image-btn" class="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-black">&times;</button>
+                </div>
                 <textarea id="prompt-input" rows="1" class="flex-grow bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none text-base px-2 py-2" placeholder="Describe your vision..."></textarea>
                 <div class="relative">
                     <button id="ratio-btn" class="p-2.5 rounded-lg hover:bg-gray-200 transition-colors">
-                        <svg class="w-5 h-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" clip-rule="evenodd" /></svg>
+                        <svg class="w-5 h-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" clip-rule="evenodd"></path></svg>
                     </button>
                     <div id="ratio-options" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border p-2 space-y-1">
                         <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center selected" data-ratio="1:1"><span>Square</span> <span>1:1</span></button>
@@ -81,5 +89,6 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
 
 
