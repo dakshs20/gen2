@@ -1,6 +1,7 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -14,377 +15,255 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const imageGalleryUrls = [
-    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png", "https://iili.io/K7bk3Ku.md.png", 
-    "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png", "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", 
-    "https://iili.io/K7yEx14.md.png", "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png", 
-    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png", "https://iili.io/K7bP679.md.png",
+// --- Global State ---
+let currentUser = null;
+let currentUserCredits = 0;
+let isGenerating = false;
+let currentAspectRatio = '1:1';
+let isFetchingMore = false;
+let page = 0;
+
+// Demo images for infinite scroll
+const ALL_IMAGE_URLS = [
+    "https://images.unsplash.com/photo-1679872365319-586320090333?q=80&w=1887",
+    "https://images.unsplash.com/photo-1664426425021-398a5857217d?q=80&w=1200",
+    "https://images.unsplash.com/photo-1681237303538-20835848e02c?q=80&w=1887",
+    "https://images.unsplash.com/photo-1664384501410-0a2544280b39?q=80&w=1200",
+    "https://images.unsplash.com/photo-1678221889498-318e815144b2?q=80&w=1887",
+    "https://images.unsplash.com/photo-1674391678438-232130351722?q=80&w=1887",
     "https://iili.io/FiiqmhB.md.png", "https://iili.io/FiiC8VS.md.png",
-    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png"
+    "https://iili.io/FiizC0P.md.png", "https://iili.io/FiiT4UP.md.png",
+    "https://iili.io/FiiA23B.md.png", "https://iili.io/Fii52mF.md.png",
+    "https://iili.io/Fii7T3Q.md.png",
 ];
 
-let currentUserCredits = 0, uploadedImageData = null, isGenerating = false, timerInterval, currentAspectRatio = '1:1';
-let galleryImageIndex = 0;
-let isLoadingMoreImages = false;
-let originalRatioIconHTML = '';
-const DOMElements = {};
 
+// --- DOM Element Caching ---
+const DOMElements = {};
 document.addEventListener('DOMContentLoaded', () => {
     const ids = [
-        'auth-btn', 'google-signin-btn', 'close-modal-btn', 
-        'close-credits-modal-btn', 'close-welcome-modal-btn', 'generation-counter', 
-        'prompt-input', 'generate-btn', 'image-upload-btn', 'image-upload-input', 
-        'remove-image-btn', 'image-preview-container', 'image-preview', 'result-container', 
-        'image-grid', 'loading-indicator', 'progress-bar-container', 'progress-bar', 
-        'timer', 'background-grid-container', 'background-grid', 'ratio-selector-btn', 
-        'ratio-options', 'modal-overlay'
+        'header-nav', 'gallery-container', 'masonry-gallery', 'loader', 'prompt-input', 'ratio-btn', 'ratio-options', 'generate-btn',
+        'generate-icon', 'loading-spinner', 'auth-modal', 'google-signin-btn', 'out-of-credits-modal'
     ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
-    // Cache modals separately
-    DOMElements.modals = {
-        auth: document.getElementById('auth-modal'),
-        outOfCredits: document.getElementById('out-of-credits-modal'),
-        welcome: document.getElementById('welcome-credits-modal')
-    };
-    
-    if (DOMElements.ratioSelectorBtn) {
-        originalRatioIconHTML = DOMElements.ratioSelectorBtn.innerHTML;
-    }
-
     initializeEventListeners();
-    populateInitialGallery();
+    loadMoreImages();
 });
 
+// --- Initializers ---
 function initializeEventListeners() {
-    onAuthStateChanged(auth, user => updateUIForAuthState(user));
-    DOMElements.authBtn?.addEventListener('click', handleAuthAction);
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal('auth', false));
-    DOMElements.closeCreditsModalBtn?.addEventListener('click', () => toggleModal('outOfCredits', false));
-    DOMElements.closeWelcomeModalBtn?.addEventListener('click', () => toggleModal('welcome', false));
-    DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
-    DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
-    DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
-    DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
-    DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
+    onAuthStateChanged(auth, user => {
+        currentUser = user;
+        updateUIForAuthState(user);
+    });
+
+    DOMElements.googleSigninBtn.addEventListener('click', signInWithGoogle);
+    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', closeAllModals));
+
+    DOMElements.generateBtn.addEventListener('click', handleImageGenerationRequest);
+    DOMElements.promptInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleImageGenerationRequest();
+        }
+    });
     
-    DOMElements.ratioSelectorBtn?.addEventListener('click', (e) => { 
-        e.stopPropagation(); 
-        toggleRatioOptions(); 
-    });
-
-    document.querySelectorAll('.ratio-option-box').forEach(box => {
-        box.addEventListener('click', (e) => {
-            e.stopPropagation();
-            selectRatio(e);
-        });
-    });
-
+    DOMElements.promptInput.addEventListener('input', autoResizeTextarea);
+    
+    DOMElements.ratioBtn.addEventListener('click', () => DOMElements.ratioOptions.classList.toggle('hidden'));
+    document.querySelectorAll('.ratio-option').forEach(btn => btn.addEventListener('click', selectAspectRatio));
     document.addEventListener('click', (e) => {
-        if (DOMElements.ratioOptions?.classList.contains('visible')) {
-            toggleRatioOptions();
+        if (!DOMElements.ratioBtn.parentElement.contains(e.target)) {
+            DOMElements.ratioOptions.classList.add('hidden');
         }
     });
 
-    DOMElements.backgroundGridContainer?.addEventListener('scroll', handleScroll);
+    // Infinite Scroll
+    DOMElements.galleryContainer.addEventListener('scroll', () => {
+        const { scrollTop, scrollHeight, clientHeight } = DOMElements.galleryContainer;
+        if (scrollHeight - scrollTop - clientHeight < 1000 && !isFetchingMore) {
+            loadMoreImages();
+        }
+    });
 }
 
-function handleScroll() {
-    const container = DOMElements.backgroundGridContainer;
-    if (!container) return;
-    const threshold = 500;
-    const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
-    if (isNearBottom && !isLoadingMoreImages) {
-        appendMoreImages();
-    }
-}
-
-function populateInitialGallery() {
-    const grid = DOMElements.backgroundGrid;
-    if (!grid) return;
-    grid.innerHTML = '';
-    for (let i = 0; i < 30; i++) {
-        appendImageToGrid();
-    }
-}
-
-function appendMoreImages() {
-    isLoadingMoreImages = true;
-    for (let i = 0; i < 10; i++) {
-        appendImageToGrid();
-    }
-    isLoadingMoreImages = false;
-}
-
-function appendImageToGrid() {
-    const grid = DOMElements.backgroundGrid;
-    if (!grid) return;
-    const img = document.createElement('img');
-    img.className = 'grid-image';
-    img.src = imageGalleryUrls[galleryImageIndex % imageGalleryUrls.length];
-    img.loading = 'lazy';
-    grid.appendChild(img);
-    galleryImageIndex++;
-}
-
-function toggleModal(modalKey, show) {
-    const modal = DOMElements.modals[modalKey];
-    if (!modal || !DOMElements.modalOverlay) return;
-
-    DOMElements.modalOverlay.classList.toggle('visible', show);
-    
-    // Hide all modals before showing the target one
-    Object.values(DOMElements.modals).forEach(m => m.classList.remove('visible'));
-
-    if (show) {
-        modal.classList.add('visible');
-    }
-}
-
+// --- UI & State Management ---
 
 async function updateUIForAuthState(user) {
-    const counter = DOMElements.generationCounter;
     if (user) {
-        DOMElements.authBtn.textContent = 'Sign Out';
+        DOMElements.headerNav.innerHTML = `
+            <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+            <div id="credits-display" class="text-sm font-medium text-gray-600"></div>
+            <button id="sign-out-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-500 transition-colors">Sign Out</button>
+        `;
+        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
+        
         try {
             const token = await user.getIdToken(true);
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) throw new Error('Failed to fetch credits');
+            
             const data = await response.json();
             currentUserCredits = data.credits;
-            if(counter) counter.textContent = `Credits: ${currentUserCredits}`;
-            if (data.isNewUser) {
-                toggleModal('welcome', true);
-                const freeCreditsEl = document.getElementById('free-credits-amount');
-                if(freeCreditsEl) freeCreditsEl.textContent = data.credits;
-            }
+            document.getElementById('credits-display').textContent = `Credits: ${currentUserCredits}`;
+
         } catch (error) {
             console.error("Error fetching credits:", error);
-            if(counter) counter.textContent = "Credits: Error";
+            document.getElementById('credits-display').textContent = "Credits: Error";
         }
     } else {
-        DOMElements.authBtn.textContent = 'Sign In';
-        if(counter) counter.textContent = "";
-        currentUserCredits = 0;
+        DOMElements.headerNav.innerHTML = `
+            <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+            <button id="sign-in-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-500 transition-colors">Sign In</button>
+        `;
+        document.getElementById('sign-in-btn').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
     }
 }
 
-function handleAuthAction() {
-    auth.currentUser ? signOut(auth).catch(console.error) : toggleModal('auth', true);
+function selectAspectRatio(event) {
+    const btn = event.currentTarget;
+    currentAspectRatio = btn.dataset.ratio;
+    
+    document.querySelectorAll('.ratio-option').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+    
+    DOMElements.ratioOptions.classList.add('hidden');
+}
+
+
+// --- Core Generation Logic ---
+async function handleImageGenerationRequest() {
+    if (isGenerating) return;
+    if (!currentUser) {
+        toggleModal(DOMElements.authModal, true);
+        return;
+    }
+    if (currentUserCredits <= 0) {
+        toggleModal(DOMElements.outOfCreditsModal, true);
+        return;
+    }
+    const prompt = DOMElements.promptInput.value.trim();
+    if (!prompt) return;
+
+    await generateImage(prompt);
+}
+
+async function generateImage(prompt) {
+    setLoadingState(true);
+    try {
+        const token = await currentUser.getIdToken();
+        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+        if (!deductResponse.ok) throw new Error('Credit deduction failed');
+
+        await addDoc(collection(db, 'generations'), {
+            userId: currentUser.uid,
+            prompt: prompt,
+            createdAt: serverTimestamp()
+        });
+        
+        const generateResponse = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ prompt, aspectRatio: currentAspectRatio })
+        });
+        if (!generateResponse.ok) throw new Error('API generation failed');
+        
+        const result = await generateResponse.json();
+        const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
+        if (!base64Data) throw new Error("No image data in response");
+        
+        displayImage(`data:image/png;base64,${base64Data}`, prompt, true);
+        
+        const creditData = await deductResponse.json();
+        currentUserCredits = creditData.newCredits;
+        document.getElementById('credits-display').textContent = `Credits: ${currentUserCredits}`;
+
+    } catch (error) {
+        console.error("Generation Error:", error);
+    } finally {
+        setLoadingState(false);
+        DOMElements.promptInput.value = '';
+        autoResizeTextarea({target: DOMElements.promptInput});
+    }
+}
+
+function displayImage(imageUrl, prompt, isNew = false) {
+    const item = document.createElement('div');
+    item.className = 'grid-item';
+    if(isNew) item.style.animationDelay = '0ms'; // New items fade in immediately
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = prompt || "AI generated image";
+    img.className = 'w-full h-auto object-cover';
+    img.loading = 'lazy';
+    
+    item.appendChild(img);
+    
+    if (isNew) {
+        DOMElements.masonryGallery.prepend(item);
+    } else {
+        DOMElements.masonryGallery.appendChild(item);
+    }
+}
+
+function loadMoreImages() {
+    if (isFetchingMore) return;
+    isFetchingMore = true;
+    DOMElements.loader.style.display = 'block';
+
+    setTimeout(() => { // Simulate network delay
+        const imagesToLoad = ALL_IMAGE_URLS.slice(page * 10, (page + 1) * 10);
+        if (imagesToLoad.length === 0) {
+            DOMElements.loader.style.display = 'none';
+            return;
+        }
+
+        imagesToLoad.forEach((url, index) => {
+            const item = document.createElement('div');
+            item.className = 'grid-item';
+            // Stagger animation for items loading on scroll
+            item.style.animationDelay = `${index * 50}ms`; 
+            item.innerHTML = `<img src="${url}" class="w-full h-auto object-cover rounded-lg bg-gray-200" loading="lazy">`;
+            DOMElements.masonryGallery.appendChild(item);
+        });
+
+        page++;
+        isFetchingMore = false;
+    }, 1000);
+}
+
+
+// --- Helpers & Utilities ---
+function setLoadingState(isLoading) {
+    isGenerating = isLoading;
+    DOMElements.generateBtn.disabled = isLoading;
+    DOMElements.generateIcon.classList.toggle('hidden', isLoading);
+    DOMElements.loadingSpinner.classList.toggle('hidden', !isLoading);
+}
+
+function autoResizeTextarea(e) {
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
 }
 
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
-      .then(() => toggleModal('auth', false))
-      .catch((error) => {
-            console.error("Google Sign-In Error:", error);
-            alert("Could not sign in with Google. Please check if pop-ups are blocked and try again.");
-      });
+      .then(() => closeAllModals())
+      .catch(console.error);
 }
 
-async function handleImageGenerationRequest() {
-    if (isGenerating) return;
-    if (!auth.currentUser) return toggleModal('auth', true);
-    if (currentUserCredits <= 0) return toggleModal('outOfCredits', true);
-    const prompt = DOMElements.promptInput.value.trim();
-    if (!prompt && !uploadedImageData) return;
-    generateImage(prompt);
+function toggleModal(modal, show) {
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', String(!show));
 }
 
-async function generateImage(prompt) {
-    startLoadingUI();
-    try {
-        const token = await auth.currentUser.getIdToken();
-        const deductResponse = await fetch('/api/credits', { 
-            method: 'POST', 
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!deductResponse.ok) {
-            toggleModal('outOfCredits', true);
-            throw new Error('Credit deduction failed');
-        }
-        
-        const creditData = await deductResponse.json();
-        currentUserCredits = creditData.newCredits;
-        if(DOMElements.generationCounter) {
-            DOMElements.generationCounter.textContent = `Credits: ${currentUserCredits}`;
-        }
-
-        const generateResponse = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, imageData: uploadedImageData, aspectRatio: currentAspectRatio })
-        });
-
-        if (!generateResponse.ok) {
-            const errorData = await generateResponse.json();
-            const errorMessage = errorData.error || 'An unknown server error occurred.';
-            throw new Error(errorMessage);
-        }
-
-        const result = await generateResponse.json();
-        const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
-        if (!base64Data) throw new Error("No image data in response");
-        
-        displayImage(`data:image/png;base64,${base64Data}`, prompt);
-    } catch (error) {
-        console.error("Generation Error:", error.message);
-        alert(`Sorry, generation failed: ${error.message}`);
-        resetUIAfterGeneration();
-    } finally {
-        stopLoadingUI();
-    }
-}
-
-
-function handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        uploadedImageData = { mimeType: file.type, data: reader.result.split(',')[1] };
-        DOMElements.imagePreview.src = reader.result;
-        DOMElements.imagePreviewContainer.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-}
-
-function removeUploadedImage() {
-    uploadedImageData = null;
-    DOMElements.imageUploadInput.value = '';
-    DOMElements.imagePreviewContainer.classList.add('hidden');
-}
-
-function autoResizeTextarea(e) {
-    e.target.style.height = 'auto';
-    e.target.style.height = `${e.target.scrollHeight}px`;
-}
-
-function toggleRatioOptions() {
-    DOMElements.ratioOptions?.classList.toggle('visible');
-}
-
-function selectRatio(event) {
-    const selectedBox = event.currentTarget;
-    currentAspectRatio = selectedBox.dataset.ratio;
-    
-    const selectedRatioValue = selectedBox.querySelector('.ratio-value').textContent;
-    DOMElements.ratioSelectorBtn.innerHTML = `<span class="text-sm font-semibold text-gray-700">${selectedRatioValue}</span>`;
-
-    document.querySelectorAll('.ratio-option-box').forEach(box => box.classList.remove('active'));
-    selectedBox.classList.add('active');
-
-    toggleRatioOptions();
-}
-
-function startLoadingUI() {
-    isGenerating = true;
-    DOMElements.imageGrid.classList.add('hidden');
-    DOMElements.loadingIndicator.classList.remove('hidden');
-    DOMElements.backgroundGridContainer.classList.add('dimmed');
-    startTimer();
-}
-
-function stopLoadingUI() {
-    isGenerating = false;
-    DOMElements.loadingIndicator.classList.add('hidden');
-    stopTimer();
-}
-
-function applyWatermark(baseImageUrl) {
-    return new Promise((resolve, reject) => {
-        const watermarkUrl = 'https://iili.io/FsAoG2I.md.png';
-        const mainImage = new Image(); mainImage.crossOrigin = 'anonymous';
-        const watermark = new Image(); watermark.crossOrigin = 'anonymous';
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        mainImage.onload = () => {
-            watermark.onload = () => {
-                canvas.width = mainImage.width; canvas.height = mainImage.height;
-                ctx.drawImage(mainImage, 0, 0);
-                ctx.globalAlpha = 0.75;
-                const watermarkWidth = canvas.width * 0.15;
-                const watermarkHeight = watermark.height * (watermarkWidth / watermark.width);
-                const padding = canvas.width * 0.02;
-                const x = canvas.width - watermarkWidth - padding;
-                const y = canvas.height - watermarkHeight - padding;
-                ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
-                resolve(canvas.toDataURL('image/png'));
-            };
-            watermark.onerror = reject; watermark.src = watermarkUrl;
-        };
-        mainImage.onerror = reject; mainImage.src = baseImageUrl;
-    });
-}
-
-async function displayImage(imageUrl, prompt) {
-    try {
-        const watermarkedImageUrl = await applyWatermark(imageUrl);
-        DOMElements.imageGrid.classList.remove('hidden');
-        DOMElements.imageGrid.innerHTML = ''; 
-        const imgContainer = document.createElement('div');
-        imgContainer.className = 'bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-2 relative group max-w-2xl mx-auto border border-gray-200/80';
-        const img = document.createElement('img');
-        img.src = watermarkedImageUrl;
-        img.alt = prompt;
-        img.className = 'w-full h-auto object-contain rounded-xl';
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity';
-        const downloadButton = document.createElement('button');
-        downloadButton.className = "bg-black/50 text-white p-2 rounded-full";
-        downloadButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
-        downloadButton.onclick = () => {
-            const a = document.createElement('a');
-            a.href = watermarkedImageUrl; a.download = 'genart-image.png';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        };
-        const closeButton = document.createElement('button');
-        closeButton.className = "bg-black/50 text-white p-2 rounded-full";
-        closeButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-        closeButton.onclick = resetUIAfterGeneration;
-        buttonContainer.append(downloadButton, closeButton);
-        imgContainer.append(img, buttonContainer);
-        DOMElements.imageGrid.appendChild(imgContainer);
-    } catch (error) {
-        console.error("Error applying watermark or displaying image:", error);
-    }
-}
-
-function resetUIAfterGeneration() {
-    DOMElements.imageGrid.classList.add('hidden');
-    DOMElements.imageGrid.innerHTML = '';
-    DOMElements.backgroundGridContainer.classList.remove('dimmed');
-    DOMElements.promptInput.value = '';
-    autoResizeTextarea({target: DOMElements.promptInput});
-    removeUploadedImage();
-    
-    // Reset aspect ratio button
-    if (DOMElements.ratioSelectorBtn && originalRatioIconHTML) {
-        DOMElements.ratioSelectorBtn.innerHTML = originalRatioIconHTML;
-    }
-    currentAspectRatio = '1:1';
-    document.querySelectorAll('.ratio-option-box').forEach(box => box.classList.remove('active'));
-    document.querySelector('.ratio-option-box[data-ratio="1:1"]')?.classList.add('active');
-}
-
-function startTimer() {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-    let startTime = Date.now();
-    timerInterval = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-        if(DOMElements.timer) DOMElements.timer.textContent = `${(elapsedTime / 1000).toFixed(1)}s`;
-        const progress = Math.min(elapsedTime / 17000, 1); 
-        if(DOMElements.progressBar) DOMElements.progressBar.style.width = `${progress * 100}%`;
-    }, 100);
-}
-
-function stopTimer() {
-    clearInterval(timerInterval);
+function closeAllModals() {
+    [DOMElements.authModal, DOMElements.outOfCreditsModal].forEach(modal => toggleModal(modal, false));
 }
 
