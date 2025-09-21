@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GenArt: AI Image Generator</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- 1. Preload the most important above-the-fold images for faster loading -->
+    <link rel="preload" as="image" href="https://iili.io/K7bN7Hl.md.png">
+    <link rel="preload" as="image" href="https://iili.io/K7bOTzP.md.png">
+    <link rel="preload" as="image" href="https://iili.io/K7yYoqN.md.png">
+    <link rel="preload" as="image" href="https://iili.io/K7bk3Ku.md.png">
+    <link rel="preload" as="image" href="https://iili.io/K7b6OPV.md.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -26,7 +34,18 @@
         <!-- Masonry Gallery -->
         <main id="gallery-container" class="flex-grow w-full h-full overflow-y-auto pt-20 pb-28">
             <div id="masonry-gallery" class="p-4">
-                <!-- Images will be dynamically inserted here -->
+                <!-- 2. Hardcode the initial set of images so they render immediately without waiting for JavaScript -->
+                <!-- FIX: Added 'block' class to each image to ensure proper rendering within the masonry columns -->
+                <div class="masonry-item"><img src="https://iili.io/K7bN7Hl.md.png" class="rounded-lg w-full h-auto block" loading="eager" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7bOTzP.md.png" class="rounded-lg w-full h-auto block" loading="eager" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7yYoqN.md.png" class="rounded-lg w-full h-auto block" loading="eager" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7bk3Ku.md.png" class="rounded-lg w-full h-auto block" loading="eager" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7b6OPV.md.png" class="rounded-lg w-full h-auto block" loading="eager" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7be88v.md.png" class="rounded-lg w-full h-auto block" loading="lazy" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7b894e.md.png" class="rounded-lg w-full h-auto block" loading="lazy" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7y1cUN.md.png" class="rounded-lg w-full h-auto block" loading="lazy" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7yEx14.md.png" class="rounded-lg w-full h-auto block" loading="lazy" alt="Generated Art"></div>
+                <div class="masonry-item"><img src="https://iili.io/K7b4VQR.md.png" class="rounded-lg w-full h-auto block" loading="lazy" alt="Generated Art"></div>
             </div>
             <div id="loader" class="text-center py-8" style="display: none;">
                 <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
