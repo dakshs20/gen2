@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
 
     initializeEventListeners();
+    initializeImageLoading(); // New function for instant loading effect
     onAuthStateChanged(auth, user => {
         currentUser = user;
         updateUIForAuthState(user);
@@ -90,7 +91,7 @@ function initializeEventListeners() {
         const { scrollTop, scrollHeight, clientHeight } = DOMElements.galleryContainer;
         
         // Header blur fade effect
-        if (scrollTop > 20) { // A small threshold to start the fade
+        if (scrollTop > 20) { 
             DOMElements.headerBlurOverlay.classList.add('opacity-100');
         } else {
             DOMElements.headerBlurOverlay.classList.remove('opacity-100');
@@ -99,6 +100,22 @@ function initializeEventListeners() {
         // Infinite scroll logic
         if (scrollTop + clientHeight >= scrollHeight - 300 && !isFetchingMore) {
             fetchMoreImages();
+        }
+    });
+}
+
+// --- NEW: Instant Image Loading Logic ---
+function initializeImageLoading() {
+    const images = document.querySelectorAll('.masonry-item img');
+    images.forEach(img => {
+        // If image is already cached by the browser, reveal it instantly
+        if (img.complete) {
+            img.classList.add('loaded');
+        } else {
+            // Otherwise, add an event listener to reveal it when it's done
+            img.addEventListener('load', () => {
+                img.classList.add('loaded');
+            });
         }
     });
 }
@@ -152,9 +169,19 @@ function addImageToGallery(imageUrl, isNew = false) {
     item.className = 'masonry-item';
     const img = document.createElement('img');
     img.src = imageUrl;
-    img.className = 'rounded-lg w-full h-auto block'; // Added 'block' to ensure correct masonry rendering
+    img.className = 'rounded-lg w-full h-auto block';
     img.loading = 'lazy';
     img.alt = 'Generated Art';
+    
+    // Apply the same loading logic to dynamically added images
+    if (img.complete) {
+        img.classList.add('loaded');
+    } else {
+        img.addEventListener('load', () => {
+            img.classList.add('loaded');
+        });
+    }
+
     item.appendChild(img);
 
     if (isNew) {
@@ -166,14 +193,14 @@ function addImageToGallery(imageUrl, isNew = false) {
 
 function fetchMoreImages() {
     if (nextImageIndex >= ALL_IMAGE_URLS.length) {
-        DOMElements.loader.style.display = 'none'; // No more images
+        DOMElements.loader.style.display = 'none';
         return;
     }
 
     isFetchingMore = true;
     DOMElements.loader.style.display = 'block';
 
-    setTimeout(() => { // Simulate network delay
+    setTimeout(() => {
         const imagesToLoad = ALL_IMAGE_URLS.slice(nextImageIndex, nextImageIndex + 5);
         imagesToLoad.forEach(url => addImageToGallery(url));
         nextImageIndex += 5;
@@ -197,7 +224,6 @@ async function handleImageGenerationRequest() {
     }
     const prompt = DOMElements.promptInput.value.trim();
     if (!prompt && !uploadedImageData) {
-        // Add a visual cue for empty prompt
         DOMElements.promptInput.classList.add('placeholder-red-400');
         setTimeout(() => DOMElements.promptInput.classList.remove('placeholder-red-400'), 1000);
         return;
@@ -211,11 +237,9 @@ async function generateImage(prompt) {
     try {
         const token = await currentUser.getIdToken();
         
-        // 1. Deduct credit first
         const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
         if (!deductResponse.ok) throw new Error('Credit deduction failed');
         
-        // 2. Generate image
         const body = { prompt, aspectRatio: currentAspectRatio };
         if (uploadedImageData) {
             body.imageData = uploadedImageData;
@@ -233,7 +257,6 @@ async function generateImage(prompt) {
         
         const result = await generateResponse.json();
         
-        // Handle different API responses
         const base64Data = uploadedImageData 
             ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data 
             : result.predictions?.[0]?.bytesBase64Encoded;
@@ -241,12 +264,11 @@ async function generateImage(prompt) {
         if (!base64Data) throw new Error("No image data in API response");
         
         addImageToGallery(`data:image/png;base64,${base64Data}`, true);
-        await fetchUserCredits(currentUser); // Refresh credits
+        await fetchUserCredits(currentUser);
         resetPromptBar();
 
     } catch (error) {
         console.error("Generation Error:", error);
-        // TODO: Add user-facing error message
     } finally {
         setLoadingState(false);
     }
