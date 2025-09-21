@@ -1,133 +1,99 @@
-/* Base Styles */
+/* --- Global & Typography --- */
 body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    color: #1f2937; /* Tailwind gray-800 */
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 }
 
-/* --- Masonry Background --- */
-#background-grid-container {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-    transition: opacity 0.5s ease, filter 0.5s ease;
+/* --- Masonry Gallery --- */
+#gallery-container {
+    /* Add padding to prevent content from being hidden behind fixed header/footer */
+    padding: 6rem 1.5rem 8rem 1.5rem;
 }
 
-#background-grid {
-    column-count: 5;
-    column-gap: 1rem;
-    padding: 1rem;
+.masonry-grid {
+    column-gap: 1.5rem;
 }
-
-.grid-image {
-    width: 100%;
-    height: auto;
-    margin-bottom: 1rem;
-    border-radius: 1rem;
-    object-fit: cover;
-    background-color: #e5e7eb;
-    break-inside: avoid; /* Prevents images from breaking across columns */
-}
-
-
-/* --- Sticky Prompt Footer --- */
-.prompt-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-}
-
-#prompt-input {
-    min-height: 48px;
-    max-height: 200px;
-}
-
-/* --- UI State Changes --- */
-#background-grid-container.dimmed {
-    opacity: 0.1;
-    filter: blur(8px);
-}
-
-/* --- Aspect Ratio Selector --- */
-.ratio-options-container {
-    position: absolute;
-    bottom: calc(100% + 0.5rem); /* Position above the prompt container */
-    right: 0; /* Align to the right side */
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    border-radius: 1rem;
-    border: 1px solid rgba(229, 231, 235, 0.9);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-    padding: 0.75rem;
-    display: flex;
-    gap: 0.5rem;
+.grid-item {
+    margin-bottom: 1.5rem;
+    break-inside: avoid;
     opacity: 0;
-    visibility: hidden;
-    transform: translateY(10px);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-    transform-origin: bottom right;
+    transform: translateY(20px);
+    animation: fadeInSlideUp 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
-.ratio-options-container.visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
+.grid-item img {
+    border-radius: 0.75rem; /* rounded-xl */
+    background-color: #e5e7eb; /* gray-200 for placeholder */
 }
 
-.ratio-option-box {
+@keyframes fadeInSlideUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive columns */
+@media (min-width: 640px) { .masonry-grid { columns: 2; } }
+@media (min-width: 1024px) { .masonry-grid { columns: 3; } }
+@media (min-width: 1280px) { .masonry-grid { columns: 4; } }
+@media (min-width: 1536px) { .masonry-grid { columns: 5; } }
+
+
+/* --- Prompt Bar --- */
+#prompt-input {
+    min-height: 52px;
+    max-height: 200px;
+    line-height: 1.5;
+}
+#prompt-input::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+
+/* --- Aspect Ratio Dropdown --- */
+.ratio-option {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    cursor: pointer;
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 0.875rem; /* text-sm */
+    color: #374151; /* gray-700 */
     transition: background-color 0.2s;
-    border: 2px solid transparent;
 }
-
-.ratio-option-box:hover {
+.ratio-option:hover {
     background-color: #f3f4f6; /* gray-100 */
 }
-
-.ratio-option-box.active {
-    background-color: #dbeafe; /* blue-100 */
-    border-color: #3b82f6; /* blue-500 */
+.ratio-option.selected {
+    background-color: #2563eb; /* blue-600 */
+    color: white;
+}
+.ratio-option svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.75rem; /* mr-3 */
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+.ratio-option .ratio-dim {
+    margin-left: auto;
+    font-size: 0.75rem; /* text-xs */
+    color: #6b7280; /* gray-500 */
+}
+.ratio-option.selected .ratio-dim {
+    color: #d1d5db; /* gray-300 */
 }
 
-.ratio-option-box span {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #1f2937;
+/* --- Modals --- */
+[aria-hidden="false"] {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-/* Ratio icons */
-.ratio-icon-square { width: 24px; height: 24px; border: 2px solid #6b7280; border-radius: 4px; }
-.ratio-icon-landscape { width: 28px; height: 18px; border: 2px solid #6b7280; border-radius: 4px; }
-.ratio-icon-portrait { width: 18px; height: 28px; border: 2px solid #6b7280; border-radius: 4px; }
-.ratio-icon-instagram { width: 22px; height: 28px; border: 2px solid #6b7280; border-radius: 4px; }
-
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    #background-grid {
-        column-count: 2;
-    }
-    .prompt-footer {
-        backdrop-filter: none;
-    }
-    #background-grid-container {
-        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%);
-        mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%);
-    }
-    .prompt-footer .bg-white\\/80 {
-        background-color: transparent;
-    }
+/* Remove default blue outline on focus and use Tailwind's focus rings */
+*:focus {
+    outline: none;
 }
 
