@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'prompt-input', 'generate-btn', 'generate-icon', 'loading-spinner',
         'image-upload-btn', 'image-upload-input', 'remove-image-btn',
         'image-preview-container', 'image-preview', 'masonry-gallery', 'gallery-container', 'loader',
-        'ratio-btn', 'ratio-options'
+        'ratio-btn', 'ratio-options', 'header-blur-overlay'
     ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
@@ -85,9 +85,18 @@ function initializeEventListeners() {
         });
     });
 
-    // Infinite Scroll
+    // Combined Scroll Listener for Gallery
     DOMElements.galleryContainer.addEventListener('scroll', () => {
         const { scrollTop, scrollHeight, clientHeight } = DOMElements.galleryContainer;
+        
+        // Header blur fade effect
+        if (scrollTop > 20) { // A small threshold to start the fade
+            DOMElements.headerBlurOverlay.classList.add('opacity-100');
+        } else {
+            DOMElements.headerBlurOverlay.classList.remove('opacity-100');
+        }
+
+        // Infinite scroll logic
         if (scrollTop + clientHeight >= scrollHeight - 300 && !isFetchingMore) {
             fetchMoreImages();
         }
