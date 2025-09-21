@@ -39,9 +39,17 @@ body, html {
     display: inline-block;    /* Required for column layout */
     width: 100%;
     opacity: 0;
-    transform: translateY(20px);
-    animation: fadeIn 0.5s ease-out forwards;
+    transform: translateY(10px);
+    animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* Initial items that are hardcoded in HTML don't need the animation */
+#masonry-gallery > .masonry-item:nth-child(-n+10) {
+    opacity: 1;
+    transform: none;
+    animation: none;
+}
+
 
 @keyframes fadeIn {
     to {
