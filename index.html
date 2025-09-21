@@ -6,91 +6,79 @@
     <title>GenArt: AI Image Generator</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-white overflow-hidden">
+<body class="bg-gray-100 font-sans">
 
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-            <a href="index.html">
-                <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-6 w-auto">
-            </a>
-            <nav id="header-nav" class="flex items-center space-x-6">
-                <!-- Auth state will be rendered here by script.js -->
+    <header class="fixed top-0 left-0 right-0 z-50 p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold text-gray-800">GenArt</a>
+            <nav id="header-nav" class="flex items-center space-x-4 bg-white/80 backdrop-blur-lg rounded-full px-3 py-1.5 shadow-sm border border-white/20">
+                <!-- Auth state will be populated here by script.js -->
             </nav>
         </div>
     </header>
 
-    <!-- Main Content: Infinite Scroll Gallery -->
-    <main id="gallery-container" class="w-full h-screen overflow-y-auto">
+    <!-- Gallery -->
+    <main id="gallery-container" class="w-full h-screen overflow-y-auto pt-20">
         <div id="masonry-gallery" class="masonry-grid">
-            <!-- Images will be dynamically inserted here -->
+            <!-- Images will be injected by JavaScript -->
         </div>
-        <div id="loader" class="text-center py-10" style="display: none;">
-             <p class="text-gray-500">Loading more images...</p>
+        <div id="loader" class="text-center py-8" style="display: none;">
+            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
         </div>
     </main>
 
-    <!-- Fixed Prompt Footer -->
-    <footer class="fixed bottom-0 left-0 right-0 z-30 p-4">
-        <div class="max-w-3xl mx-auto bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200/80 p-3 flex items-center gap-3">
-            <textarea id="prompt-input" rows="1" class="w-full bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none text-base p-2.5" placeholder="Describe your vision..."></textarea>
-            
-            <div class="relative flex-shrink-0">
-                <button id="ratio-btn" class="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                </button>
-                <div id="ratio-options" class="hidden absolute bottom-full right-0 mb-2 w-52 bg-white rounded-xl shadow-lg border p-2">
-                    <button class="ratio-option selected" data-ratio="1:1">
-                        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
-                        <span>Square</span><span class="ratio-dim">1:1</span>
+    <!-- Prompt Bar -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 z-50">
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-white/80 backdrop-blur-xl border border-gray-200/80 shadow-2xl rounded-xl p-2.5 flex items-center gap-2">
+                <textarea id="prompt-input" rows="1" class="flex-grow bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none text-base px-2 py-2" placeholder="Describe your vision..."></textarea>
+                <div class="relative">
+                    <button id="ratio-btn" class="p-2.5 rounded-lg hover:bg-gray-200 transition-colors">
+                        <svg class="w-5 h-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" clip-rule="evenodd" /></svg>
                     </button>
-                    <button class="ratio-option" data-ratio="16:9">
-                        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"></rect></svg>
-                        <span>Landscape</span><span class="ratio-dim">16:9</span>
-                    </button>
-                    <button class="ratio-option" data-ratio="9:16">
-                        <svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"></rect></svg>
-                        <span>Portrait</span><span class="ratio-dim">9:16</span>
-                    </button>
-                    <button class="ratio-option" data-ratio="4:5">
-                         <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"></rect></svg>
-                        <span>Instagram</span><span class="ratio-dim">4:5</span>
-                    </button>
+                    <div id="ratio-options" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border p-2 space-y-1">
+                        <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center selected" data-ratio="1:1"><span>Square</span> <span>1:1</span></button>
+                        <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center" data-ratio="16:9"><span>Landscape</span> <span>16:9</span></button>
+                        <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center" data-ratio="9:16"><span>Portrait</span> <span>9:16</span></button>
+                        <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center" data-ratio="4:5"><span>Instagram</span> <span>4:5</span></button>
+                    </div>
                 </div>
+                <button id="generate-btn" class="w-11 h-11 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition-all duration-300 flex-shrink-0" aria-label="Generate">
+                    <svg id="generate-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    <svg id="loading-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
             </div>
-            
-            <button id="generate-btn" class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-500 transition-all duration-300 flex-shrink-0" aria-label="Generate">
-                <svg id="generate-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-                <div id="loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            </button>
         </div>
     </footer>
 
     <!-- Modals -->
-    <div id="auth-modal" aria-hidden="true" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 invisible transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Sign In to Create</h2>
-            <p class="text-gray-500 mb-6">Join or sign in to start generating images.</p>
-            <button id="google-signin-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-500 flex items-center justify-center gap-2"><span>Sign In with Google</span></button>
-            <button class="close-modal-btn mt-4 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+    <div id="auth-modal" aria-hidden="true" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 invisible transition-opacity duration-300 [&[aria-hidden='false']]:opacity-100 [&[aria-hidden='false']]:visible">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+            <button class="close-modal-btn absolute top-4 right-4 text-gray-400 hover:text-gray-600">&times;</button>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Sign In</h2>
+            <p class="text-gray-500 mb-6">Access your credits and generation history.</p>
+            <button id="google-signin-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2"><span>Sign In with Google</span></button>
         </div>
     </div>
-    <div id="out-of-credits-modal" aria-hidden="true" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 invisible transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
+    <div id="out-of-credits-modal" aria-hidden="true" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 invisible transition-opacity duration-300 [&[aria-hidden='false']]:opacity-100 [&[aria-hidden='false']]:visible">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center relative">
+            <button class="close-modal-btn absolute top-4 right-4 text-gray-400 hover:text-gray-600">&times;</button>
             <h2 class="text-2xl font-semibold text-gray-800 mb-2">Out of Credits</h2>
-            <p class="text-gray-500 mb-6">Please purchase more to continue creating.</p>
-            <a href="pricing.html" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-500 block">Buy Credits</a>
-            <button class="close-modal-btn mt-4 text-sm text-gray-500 hover:text-gray-700">Not now</button>
+            <p class="text-gray-500 mb-6">Please purchase more to continue.</p>
+            <a href="pricing.html" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 block">Buy Credits</a>
         </div>
     </div>
-
+    
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
 
