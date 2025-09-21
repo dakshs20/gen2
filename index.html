@@ -36,7 +36,7 @@
     <!-- Prompt Bar -->
     <footer class="fixed bottom-0 left-0 right-0 p-4 z-50">
         <div class="max-w-3xl mx-auto">
-            <div class="bg-white/80 backdrop-blur-xl border border-gray-200/80 shadow-2xl rounded-xl p-2.5 flex items-center gap-2">
+            <div class="bg-white/50 backdrop-blur-2xl border border-white/20 shadow-xl rounded-full p-2.5 flex items-center gap-2">
                 <textarea id="prompt-input" rows="1" class="flex-grow bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none text-base px-2 py-2" placeholder="Describe your vision..."></textarea>
                 <div class="relative">
                     <button id="ratio-btn" class="p-2.5 rounded-lg hover:bg-gray-200 transition-colors">
@@ -49,7 +49,7 @@
                         <button class="ratio-option w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex justify-between items-center" data-ratio="4:5"><span>Instagram</span> <span>4:5</span></button>
                     </div>
                 </div>
-                <button id="generate-btn" class="w-11 h-11 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition-all duration-300 flex-shrink-0" aria-label="Generate">
+                <button id="generate-btn" class="w-11 h-11 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-all duration-300 flex-shrink-0" aria-label="Generate">
                     <svg id="generate-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     <svg id="loading-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -81,4 +81,5 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
 
