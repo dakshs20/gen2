@@ -67,6 +67,15 @@ function initializeEventListeners() {
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     
+    // New: Listen for 'Enter' key press on the prompt input
+    DOMElements.promptInput?.addEventListener('keydown', (event) => {
+        // Trigger generation if Enter is pressed without the Shift key
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault(); // Prevents adding a new line in the textarea
+            handleImageGenerationRequest();
+        }
+    });
+    
     DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
@@ -328,4 +337,5 @@ function signInWithGoogle() {
       .then(() => closeAllModals())
       .catch(console.error);
 }
+
 
