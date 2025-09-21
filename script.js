@@ -18,8 +18,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+// --- Gallery Image URLs ---
+const imageGalleryUrls = [
+    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png",
+    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png",
+    "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png",
+    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png",
+    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png",
+    "https://iili.io/K7bP679.md.png"
+];
+
 // --- Global State ---
-let currentUser = null;
 let currentUserCredits = 0;
 let isGenerating = false;
 let currentAspectRatio = '1:1';
@@ -266,4 +275,5 @@ function toggleModal(modal, show) {
 function closeAllModals() {
     [DOMElements.authModal, DOMElements.outOfCreditsModal].forEach(modal => toggleModal(modal, false));
 }
+
 
