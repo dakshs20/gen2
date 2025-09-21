@@ -1,7 +1,7 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -25,6 +25,7 @@ let isGenerating = false;
 let currentAspectRatio = '1:1';
 let isFetchingMore = false;
 let page = 0;
+let uploadedImageData = null;
 
 // Demo images for infinite scroll
 const ALL_IMAGE_URLS = [
@@ -39,172 +40,118 @@ const ALL_IMAGE_URLS = [
 
 // --- DOM Element Caching ---
 const DOMElements = {};
+
 document.addEventListener('DOMContentLoaded', () => {
     const ids = [
         'header-nav', 'gallery-container', 'masonry-gallery', 'loader', 'prompt-input', 'ratio-btn', 'ratio-options', 'generate-btn',
-        'generate-icon', 'loading-spinner', 'auth-modal', 'google-signin-btn', 'out-of-credits-modal'
+        'generate-icon', 'loading-spinner', 'auth-modal', 'google-signin-btn', 'out-of-credits-modal',
+        'image-upload-btn', 'image-upload-input', 'image-preview-container', 'image-preview', 'remove-image-btn'
     ];
     ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
     
     initializeEventListeners();
-    loadMoreImages();
+    loadInitialImages();
 });
 
-// --- Initializers ---
 function initializeEventListeners() {
     onAuthStateChanged(auth, user => {
         currentUser = user;
         updateUIForAuthState(user);
     });
 
-    DOMElements.googleSigninBtn.addEventListener('click', signInWithGoogle);
-    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', closeAllModals));
-
-    DOMElements.generateBtn.addEventListener('click', handleImageGenerationRequest);
-    DOMElements.promptInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleImageGenerationRequest();
-        }
+    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+    DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
+    DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
+    DOMElements.ratioBtn?.addEventListener('click', () => DOMElements.ratioOptions.classList.toggle('hidden'));
+    
+    document.querySelectorAll('.ratio-option').forEach(btn => {
+        btn.addEventListener('click', () => selectAspectRatio(btn));
     });
     
-    DOMElements.promptInput.addEventListener('input', autoResizeTextarea);
-    
-    DOMElements.ratioBtn.addEventListener('click', () => DOMElements.ratioOptions.classList.toggle('hidden'));
-    document.querySelectorAll('.ratio-option').forEach(btn => btn.addEventListener('click', selectAspectRatio));
-    document.addEventListener('click', (e) => {
-        if (!DOMElements.ratioBtn.parentElement.contains(e.target)) {
-            DOMElements.ratioOptions.classList.add('hidden');
-        }
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            DOMElements.authModal.setAttribute('aria-hidden', 'true');
+            DOMElements.outOfCreditsModal.setAttribute('aria-hidden', 'true');
+        });
     });
 
-    // Infinite Scroll
     DOMElements.galleryContainer.addEventListener('scroll', () => {
         const { scrollTop, scrollHeight, clientHeight } = DOMElements.galleryContainer;
         if (scrollHeight - scrollTop - clientHeight < 1000 && !isFetchingMore) {
             loadMoreImages();
         }
     });
+
+    DOMElements.imageUploadBtn.addEventListener('click', () => DOMElements.imageUploadInput.click());
+    DOMElements.imageUploadInput.addEventListener('change', handleImageUpload);
+    DOMElements.removeImageBtn.addEventListener('click', removeUploadedImage);
 }
 
 // --- UI & State Management ---
 
 async function updateUIForAuthState(user) {
+    DOMElements.headerNav.innerHTML = ''; // Clear previous state
     if (user) {
-        DOMElements.headerNav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-            <div id="credits-display" class="text-sm font-medium text-gray-600"></div>
-            <button id="sign-out-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-500 transition-colors">Sign Out</button>
-        `;
-        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
-        
+        // User is signed in
+        const token = await user.getIdToken(true);
         try {
-            const token = await user.getIdToken(true);
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) throw new Error('Failed to fetch credits');
-            
-            const data = await response.json();
-            currentUserCredits = data.credits;
-            document.getElementById('credits-display').textContent = `Credits: ${currentUserCredits}`;
-
+            if (response.ok) {
+                const data = await response.json();
+                currentUserCredits = data.credits;
+                DOMElements.headerNav.innerHTML = `
+                    <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-blue-600">Pricing</a>
+                    <span class="text-sm font-medium text-gray-800">Credits: ${currentUserCredits}</span>
+                    <button id="auth-action-btn" class="text-sm font-medium text-gray-600 hover:text-blue-600">Sign Out</button>
+                `;
+            } else {
+                 DOMElements.headerNav.innerHTML = `<span class="text-sm text-red-500">Error loading credits</span>`;
+            }
         } catch (error) {
             console.error("Error fetching credits:", error);
-            document.getElementById('credits-display').textContent = "Credits: Error";
+            DOMElements.headerNav.innerHTML = `<span class="text-sm text-red-500">Error loading credits</span>`;
         }
+        document.getElementById('auth-action-btn').addEventListener('click', () => signOut(auth));
     } else {
+        // User is signed out
         DOMElements.headerNav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-            <button id="sign-in-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-500 transition-colors">Sign In</button>
+            <a href="pricing.html" class="text-sm font-medium text-gray-600 hover:text-blue-600">Pricing</a>
+            <button id="auth-action-btn" class="text-sm font-medium text-white bg-blue-600 px-3 py-1 rounded-full hover:bg-blue-700">Sign In</button>
         `;
-        document.getElementById('sign-in-btn').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
+        document.getElementById('auth-action-btn').addEventListener('click', handleAuthAction);
     }
 }
 
-function selectAspectRatio(event) {
-    const btn = event.currentTarget;
-    currentAspectRatio = btn.dataset.ratio;
-    
-    document.querySelectorAll('.ratio-option').forEach(el => el.classList.remove('selected'));
-    btn.classList.add('selected');
-    
+
+function handleAuthAction() {
+    if (auth.currentUser) {
+        signOut(auth).catch(console.error);
+    } else {
+        DOMElements.authModal.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function signInWithGoogle() {
+    signInWithPopup(auth, provider)
+      .then(() => DOMElements.authModal.setAttribute('aria-hidden', 'true'))
+      .catch(console.error);
+}
+
+function selectAspectRatio(selectedButton) {
+    currentAspectRatio = selectedButton.dataset.ratio;
+    document.querySelectorAll('.ratio-option').forEach(btn => btn.classList.remove('selected'));
+    selectedButton.classList.add('selected');
     DOMElements.ratioOptions.classList.add('hidden');
 }
 
+// --- Image Loading & Gallery ---
 
-// --- Core Generation Logic ---
-async function handleImageGenerationRequest() {
-    if (isGenerating) return;
-    if (!currentUser) {
-        toggleModal(DOMElements.authModal, true);
-        return;
-    }
-    if (currentUserCredits <= 0) {
-        toggleModal(DOMElements.outOfCreditsModal, true);
-        return;
-    }
-    const prompt = DOMElements.promptInput.value.trim();
-    if (!prompt) return;
-
-    await generateImage(prompt);
-}
-
-async function generateImage(prompt) {
-    setLoadingState(true);
-    try {
-        const token = await currentUser.getIdToken();
-        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
-        if (!deductResponse.ok) throw new Error('Credit deduction failed');
-
-        await addDoc(collection(db, 'generations'), {
-            userId: currentUser.uid,
-            prompt: prompt,
-            createdAt: serverTimestamp()
-        });
-        
-        const generateResponse = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, aspectRatio: currentAspectRatio })
-        });
-        if (!generateResponse.ok) throw new Error('API generation failed');
-        
-        const result = await generateResponse.json();
-        const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
-        if (!base64Data) throw new Error("No image data in response");
-        
-        displayImage(`data:image/png;base64,${base64Data}`, prompt, true);
-        
-        const creditData = await deductResponse.json();
-        currentUserCredits = creditData.newCredits;
-        document.getElementById('credits-display').textContent = `Credits: ${currentUserCredits}`;
-
-    } catch (error) {
-        console.error("Generation Error:", error);
-    } finally {
-        setLoadingState(false);
-        DOMElements.promptInput.value = '';
-        autoResizeTextarea({target: DOMElements.promptInput});
-    }
-}
-
-function displayImage(imageUrl, prompt, isNew = false) {
-    const item = document.createElement('div');
-    item.className = 'grid-item';
-    if(isNew) item.style.animationDelay = '0ms'; // New items fade in immediately
-    
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.alt = prompt || "AI generated image";
-    img.className = 'w-full h-auto object-cover';
-    img.loading = 'lazy';
-    
-    item.appendChild(img);
-    
-    if (isNew) {
-        DOMElements.masonryGallery.prepend(item);
-    } else {
-        DOMElements.masonryGallery.appendChild(item);
-    }
+function loadInitialImages() {
+    isFetchingMore = true;
+    const initialImages = ALL_IMAGE_URLS.slice(0, 10);
+    initialImages.forEach(url => displayImage(url, 'Initial gallery image'));
+    page++;
+    isFetchingMore = false;
 }
 
 function loadMoreImages() {
@@ -213,54 +160,118 @@ function loadMoreImages() {
     DOMElements.loader.style.display = 'block';
 
     setTimeout(() => { // Simulate network delay
-        const imagesToLoad = ALL_IMAGE_URLS.slice(page * 10, (page + 1) * 10);
-        if (imagesToLoad.length === 0) {
-            DOMElements.loader.style.display = 'none';
-            return;
+        const startIndex = page * 10;
+        const endIndex = startIndex + 10;
+        const newImages = ALL_IMAGE_URLS.slice(startIndex, endIndex);
+
+        if (newImages.length > 0) {
+            newImages.forEach(url => displayImage(url, 'More gallery images'));
+            page++;
         }
-
-        imagesToLoad.forEach((url, index) => {
-            const item = document.createElement('div');
-            item.className = 'grid-item';
-            // Stagger animation for items loading on scroll
-            item.style.animationDelay = `${index * 50}ms`; 
-            item.innerHTML = `<img src="${url}" class="w-full h-auto object-cover rounded-lg bg-gray-200" loading="lazy">`;
-            DOMElements.masonryGallery.appendChild(item);
-        });
-
-        page++;
+        
+        DOMElements.loader.style.display = 'none';
         isFetchingMore = false;
     }, 1000);
+}
+
+
+async function handleImageGenerationRequest() {
+    if (isGenerating) return;
+    if (!auth.currentUser) {
+        handleAuthAction();
+        return;
+    }
+    if (currentUserCredits <= 0) {
+        DOMElements.outOfCreditsModal.setAttribute('aria-hidden', 'false');
+        return;
+    }
+    const prompt = DOMElements.promptInput.value.trim();
+    if (!prompt && !uploadedImageData) return;
+
+    await generateImage(prompt);
+}
+
+async function generateImage(prompt) {
+    setLoadingState(true);
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+        if (!deductResponse.ok) throw new Error('Credit deduction failed');
+        
+        const generateResponse = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ prompt, aspectRatio: currentAspectRatio, imageData: uploadedImageData })
+        });
+        if (!generateResponse.ok) throw new Error('API generation failed');
+        
+        const result = await generateResponse.json();
+        const base64Data = uploadedImageData ? result?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData)?.inlineData?.data : result.predictions?.[0]?.bytesBase64Encoded;
+        if (!base64Data) throw new Error("No image data in response");
+        
+        displayImage(`data:image/png;base64,${base64Data}`, prompt, true);
+        
+        await updateUIForAuthState(auth.currentUser);
+
+    } catch (error) {
+        console.error("Generation Error:", error);
+        alert("Image generation failed. Please try again.");
+    } finally {
+        setLoadingState(false);
+        DOMElements.promptInput.value = '';
+        autoResizeTextarea({target: DOMElements.promptInput});
+        removeUploadedImage();
+    }
+}
+
+function displayImage(imageUrl, prompt, isNew = false) {
+    const imgWrapper = document.createElement('div');
+    imgWrapper.className = 'masonry-item';
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = prompt;
+    img.className = 'w-full h-auto object-cover rounded-lg block';
+    imgWrapper.appendChild(img);
+
+    if (isNew) {
+        DOMElements.masonryGallery.prepend(imgWrapper);
+    } else {
+        DOMElements.masonryGallery.appendChild(imgWrapper);
+    }
+}
+
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        uploadedImageData = { mimeType: file.type, data: reader.result.split(',')[1] };
+        DOMElements.imagePreview.src = reader.result;
+        DOMElements.imagePreviewContainer.classList.remove('hidden');
+        DOMElements.imageUploadBtn.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeUploadedImage() {
+    uploadedImageData = null;
+    DOMElements.imageUploadInput.value = '';
+    DOMElements.imagePreviewContainer.classList.add('hidden');
+    DOMElements.imageUploadBtn.classList.remove('hidden');
 }
 
 
 // --- Helpers & Utilities ---
 function setLoadingState(isLoading) {
     isGenerating = isLoading;
-    DOMElements.generateBtn.disabled = isLoading;
     DOMElements.generateIcon.classList.toggle('hidden', isLoading);
     DOMElements.loadingSpinner.classList.toggle('hidden', !isLoading);
+    DOMElements.generateBtn.disabled = isLoading;
 }
 
 function autoResizeTextarea(e) {
     const textarea = e.target;
     textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    textarea.style.height = `${textarea.scrollHeight}px`;
 }
-
-function signInWithGoogle() {
-    signInWithPopup(auth, provider)
-      .then(() => closeAllModals())
-      .catch(console.error);
-}
-
-function toggleModal(modal, show) {
-    if (!modal) return;
-    modal.setAttribute('aria-hidden', String(!show));
-}
-
-function closeAllModals() {
-    [DOMElements.authModal, DOMElements.outOfCreditsModal].forEach(modal => toggleModal(modal, false));
-}
-
 
