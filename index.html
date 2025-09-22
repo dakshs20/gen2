@@ -15,19 +15,50 @@
 </head>
 <body class="bg-white">
 
-    <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md">
+    <header id="main-header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
-                <a href="index.html" class="text-2xl font-bold text-blue-600">GenArt</a>
+                <a href="index.html" class="flex items-center space-x-2">
+                    <svg id="logo-svg" class="h-8 w-8 text-blue-600 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 7L12 12L22 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 22V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-2xl font-bold">GenArt</span>
+                </a>
                 <nav class="hidden md:flex items-center space-x-8">
-                    <a href="#features" class="text-gray-700 hover:text-blue-600 transition-colors">Features</a>
-                    <a href="#about" class="text-gray-700 hover:text-blue-600 transition-colors">About</a>
-                    <a href="pricing.html" class="text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="pricing.html" class="nav-link">Pricing</a>
                 </nav>
-                <div class="flex items-center space-x-4">
-                     <div id="generation-counter" class="text-sm font-medium text-gray-600"></div>
-                    <button id="auth-btn" class="bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all duration-300">
-                        Sign In
+                <div class="hidden md:flex items-center space-x-4">
+                     <div id="generation-counter" class="text-sm font-medium"></div>
+                    <button id="auth-btn" class="auth-btn group">
+                        <span>Sign In</span>
+                        <svg class="h-5 w-5 ml-2 transform transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </button>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="p-2 rounded-md">
+                        <svg class="w-6 h-6" id="menu-open-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                        <svg class="w-6 h-6 hidden" id="menu-close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-md">
+            <div class="px-2 pt-2 pb-4 space-y-1 sm:px-3 text-center">
+                <a href="#features" class="mobile-nav-link">Features</a>
+                <a href="#about" class="mobile-nav-link">About</a>
+                <a href="pricing.html" class="mobile-nav-link">Pricing</a>
+                <div class="border-t border-gray-200 my-4"></div>
+                <div id="mobile-generation-counter" class="py-2 text-sm font-medium text-gray-700"></div>
+                <div class="px-4">
+                    <button id="mobile-auth-btn" class="w-full auth-btn group">
+                         <span>Sign In</span>
+                         <svg class="h-5 w-5 ml-2 transform transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>
                 </div>
             </div>
@@ -37,8 +68,8 @@
     <main>
         <!-- Hero Section -->
         <section class="relative h-screen flex items-center justify-center text-center overflow-hidden hero-section">
+            <canvas id="hero-canvas" class="absolute inset-0 z-10"></canvas>
             <div class="absolute inset-0 bg-blue-gradient z-0"></div>
-            <div class="absolute inset-0 z-10 hero-animation"></div>
             <div class="relative z-20 px-4">
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight animate-fade-in-up">The World’s Fastest AI Image Generation Platform – GenArt</h1>
                 <p class="text-lg md:text-xl text-white/90 mt-6 max-w-2xl mx-auto animate-fade-in-up" style="animation-delay: 0.3s;">Turn imagination into visuals in seconds.</p>
@@ -52,12 +83,13 @@
         <section id="generator" class="py-20 md:py-32 bg-white">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="max-w-4xl mx-auto">
-                    <div class="relative flex items-center">
+                    <div class="relative flex items-center prompt-wrapper">
                         <input type="text" id="prompt-input" placeholder="Type your imagination here…" class="w-full text-lg p-5 pr-48 rounded-full border-2 border-gray-200 focus:outline-none focus:border-blue-500 transition-colors">
                         <button id="generate-btn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-blue-700 transition-all duration-300">
                             Generate
                         </button>
                     </div>
+                     <div id="prompt-suggestions" class="flex justify-center items-center gap-2 mt-4 h-8"></div>
                 </div>
 
                 <div id="loading-indicator" class="text-center mt-12 hidden">
@@ -107,7 +139,7 @@
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid md:grid-cols-2 gap-16 items-center">
                     <div class="about-text">
-                        <h2 class="text-4xl font-bold text-gray-900 mb-6">The Future of Digital Creation</h2>
+                        <h2 class="text-4xl font-bold text-gray-900 mb-6" data-typewriter="The Future of Digital Creation"></h2>
                         <p class="text-lg text-gray-600 mb-4">GenArt began with a simple mission: to make high-end generative AI accessible to everyone. We believe that creativity should have no barriers. Our platform is built on cutting-edge research to provide a tool that is not only powerful but also intuitive and joyful to use.</p>
                         <p class="text-lg text-gray-600">Our vision is to build a full suite of generative tools. We are expanding into <span class="text-blue-600 font-semibold">Text-to-Text, AI Video Generation, and beyond…</span></p>
                     </div>
@@ -138,8 +170,9 @@
         </section>
 
         <!-- Trust & Metrics Section -->
-        <section class="py-20 md:py-28 bg-blue-600 text-white">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <section class="py-20 md:py-28 bg-blue-600 text-white relative overflow-hidden">
+            <div class="absolute inset-0 bg-blue-pattern opacity-10"></div>
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
                 <div class="grid md:grid-cols-3 gap-12 text-center">
                     <div>
                         <p class="text-5xl font-bold" data-counter="50000000">0</p>
@@ -259,8 +292,20 @@
         </div>
     </div>
 
+    <div id="image-quick-view-modal" aria-hidden="true" class="modal-overlay">
+        <div class="quick-view-content">
+            <button id="close-quick-view-btn" class="absolute top-4 right-4 text-white bg-black/30 rounded-full p-2 hover:bg-black/50 transition-colors z-10">&times;</button>
+            <img id="quick-view-image" src="" alt="Generated image quick view" class="max-w-full max-h-full object-contain">
+            <div class="absolute bottom-0 left-0 right-0 bg-black/50 p-4 text-white">
+                <p id="quick-view-prompt" class="text-sm"></p>
+                <button id="copy-prompt-btn" class="text-xs mt-2 bg-white/20 px-2 py-1 rounded-md hover:bg-white/30">Copy Prompt</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
     <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
