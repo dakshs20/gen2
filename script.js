@@ -88,7 +88,12 @@ async function updateUIForAuthState(user) {
         try {
             const token = await user.getIdToken();
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) throw new Error('Credit fetch failed');
+            if (!response.ok) {
+                // Log detailed error for debugging serverless function issues
+                const errorBody = await response.text();
+                console.error(`Credit fetch failed with status: ${response.status}`, errorBody);
+                throw new Error('Credit fetch failed');
+            }
             
             const data = await response.json();
             currentUserCredits = data.credits;
@@ -101,7 +106,7 @@ async function updateUIForAuthState(user) {
         } catch (error) {
             console.error("Credit fetch error:", error);
             currentUserCredits = 0;
-            updateCreditDisplay();
+            updateCreditDisplay(true); // Pass error state
             showMessage("Could not fetch your credit balance.", "error");
         }
     } else {
@@ -111,10 +116,14 @@ async function updateUIForAuthState(user) {
     }
 }
 
-function updateCreditDisplay() {
-    const text = auth.currentUser ? `${currentUserCredits} Credits` : '';
+function updateCreditDisplay(isError = false) {
+    let text = '';
+    if (auth.currentUser) {
+        text = isError ? `Credits: --` : `${currentUserCredits} Credits`;
+    }
     if(DOMElements.generationCounter) DOMElements.generationCounter.textContent = text;
 }
+
 
 function showMessage(text, type = 'info') {
     const messageEl = document.createElement('div');
@@ -271,9 +280,12 @@ function initializeGallery() {
     });
     // Add some initial placeholder images for design
     const initialImages = [
-        'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/kMh0iA3.png',
-        'https://i.imgur.com/5uV9nB5.png', 'https://i.imgur.com/sUTb5oT.png',
-        'https://i.imgur.com/M5S1VKH.png', 'https://i.imgur.com/dAmY8ob.png'
+        'https://placehold.co/600x800/e6f0ff/0052cc?text=GenArt',
+        'https://placehold.co/600x600/e6f0ff/0052cc?text=GenArt',
+        'https://placehold.co/600x900/e6f0ff/0052cc?text=GenArt',
+        'https://placehold.co/600x700/e6f0ff/0052cc?text=GenArt',
+        'https://placehold.co/600x500/e6f0ff/0052cc?text=GenArt',
+        'https://placehold.co/600x850/e6f0ff/0052cc?text=GenArt',
     ];
 
     initialImages.forEach(src => {
@@ -335,11 +347,11 @@ function initializeShowcaseSlider() {
     if (!tabs.length || !slider) return;
 
     const images = {
-        art: ['https://i.imgur.com/5uV9nB5.png', 'https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/M5S1VKH.png'],
-        photography: ['https://i.imgur.com/kMh0iA3.png', 'https://i.imgur.com/dAmY8ob.png', 'https://i.imgur.com/wYQmS28.png'],
-        marketing: ['https://i.imgur.com/M5S1VKH.png', 'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/kMh0iA3.png'],
-        '3d': ['https://i.imgur.com/dAmY8ob.png', 'https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/5uV9nB5.png'],
-        concept: ['https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/M5S1VKH.png'],
+        art: ['https://placehold.co/800x600/0052cc/ffffff?text=Art+1', 'https://placehold.co/800x600/0052cc/ffffff?text=Art+2', 'https://placehold.co/800x600/0052cc/ffffff?text=Art+3'],
+        photography: ['https://placehold.co/800x600/0052cc/ffffff?text=Photo+1', 'https://placehold.co/800x600/0052cc/ffffff?text=Photo+2', 'https://placehold.co/800x600/0052cc/ffffff?text=Photo+3'],
+        marketing: ['https://placehold.co/800x600/0052cc/ffffff?text=Marketing+1', 'https://placehold.co/800x600/0052cc/ffffff?text=Marketing+2', 'https://placehold.co/800x600/0052cc/ffffff?text=Marketing+3'],
+        '3d': ['https://placehold.co/800x600/0052cc/ffffff?text=3D+1', 'https://placehold.co/800x600/0052cc/ffffff?text=3D+2', 'https://placehold.co/800x600/0052cc/ffffff?text=3D+3'],
+        concept: ['https://placehold.co/800x600/0052cc/ffffff?text=Concept+1', 'https://placehold.co/800x600/0052cc/ffffff?text=Concept+2', 'https://placehold.co/800x600/0052cc/ffffff?text=Concept+3'],
     };
 
     function loadCategory(category) {
@@ -366,3 +378,4 @@ function initializeShowcaseSlider() {
     // Initial load
     loadCategory('art');
 }
+
