@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeScrollAnimations();
     initializeShowcaseSlider();
     initializeGallery();
+    initializeHeroCanvas();
+    initializePromptSuggestions();
+    initializeQuickViewModal();
+    initializeHeader();
 });
 
 function cacheDOMElements() {
@@ -50,12 +54,43 @@ function cacheDOMElements() {
     DOMElements.loadingIndicator = document.getElementById('loading-indicator');
     DOMElements.imageGallery = document.getElementById('image-gallery');
     DOMElements.messageBox = document.getElementById('message-box');
+    DOMElements.promptSuggestions = document.getElementById('prompt-suggestions');
+    DOMElements.quickViewModal = document.getElementById('image-quick-view-modal');
+    DOMElements.quickViewImage = document.getElementById('quick-view-image');
+    DOMElements.quickViewPrompt = document.getElementById('quick-view-prompt');
+    DOMElements.copyPromptBtn = document.getElementById('copy-prompt-btn');
+    DOMElements.closeQuickViewBtn = document.getElementById('close-quick-view-btn');
+    DOMElements.header = document.getElementById('main-header');
+    DOMElements.mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    DOMElements.mobileMenu = document.getElementById('mobile-menu');
+    DOMElements.mobileAuthBtn = document.getElementById('mobile-auth-btn');
+    DOMElements.mobileGenerationCounter = document.getElementById('mobile-generation-counter');
+    DOMElements.menuOpenIcon = document.getElementById('menu-open-icon');
+    DOMElements.menuCloseIcon = document.getElementById('menu-close-icon');
+}
+
+function initializeHeader() {
+    window.addEventListener('scroll', () => {
+        if (!DOMElements.header) return;
+        if (window.scrollY > 50) {
+            DOMElements.header.classList.add('scrolled');
+        } else {
+            DOMElements.header.classList.remove('scrolled');
+        }
+    });
+
+    DOMElements.mobileMenuBtn?.addEventListener('click', () => {
+        DOMElements.mobileMenu.classList.toggle('hidden');
+        DOMElements.menuOpenIcon.classList.toggle('hidden');
+        DOMElements.menuCloseIcon.classList.toggle('hidden');
+    });
 }
 
 function initializeEventListeners() {
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
 
     DOMElements.authBtn?.addEventListener('click', handleAuthAction);
+    DOMElements.mobileAuthBtn?.addEventListener('click', handleAuthAction);
     DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
     DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
     
@@ -83,13 +118,16 @@ function toggleModal(modal, show) {
 }
 
 async function updateUIForAuthState(user) {
+    const desktopAuthBtnSpan = DOMElements.authBtn?.querySelector('span');
+    const mobileAuthBtnSpan = DOMElements.mobileAuthBtn?.querySelector('span');
+
     if (user) {
-        DOMElements.authBtn.textContent = 'Sign Out';
+        if (desktopAuthBtnSpan) desktopAuthBtnSpan.textContent = 'Sign Out';
+        if (mobileAuthBtnSpan) mobileAuthBtnSpan.textContent = 'Sign Out';
         try {
             const token = await user.getIdToken();
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) {
-                // Log detailed error for debugging serverless function issues
                 const errorBody = await response.text();
                 console.error(`Credit fetch failed with status: ${response.status}`, errorBody);
                 throw new Error('Credit fetch failed');
@@ -111,7 +149,8 @@ async function updateUIForAuthState(user) {
         }
     } else {
         currentUserCredits = 0;
-        DOMElements.authBtn.textContent = 'Sign In';
+        if (desktopAuthBtnSpan) desktopAuthBtnSpan.textContent = 'Sign In';
+        if (mobileAuthBtnSpan) mobileAuthBtnSpan.textContent = 'Sign In';
         updateCreditDisplay();
     }
 }
@@ -122,6 +161,7 @@ function updateCreditDisplay(isError = false) {
         text = isError ? `Credits: --` : `${currentUserCredits} Credits`;
     }
     if(DOMElements.generationCounter) DOMElements.generationCounter.textContent = text;
+    if(DOMElements.mobileGenerationCounter) DOMElements.mobileGenerationCounter.textContent = text;
 }
 
 
@@ -181,7 +221,6 @@ async function generateImage(prompt) {
     try {
         const token = await auth.currentUser.getIdToken();
         
-        // Deduct credit first
         const deductResponse = await fetch('/api/credits', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -190,9 +229,7 @@ async function generateImage(prompt) {
         if (!deductResponse.ok) {
             if (deductResponse.status === 402) {
                 toggleModal(DOMElements.outOfCreditsModal, true);
-            } else {
-                throw new Error('Failed to deduct credit.');
-            }
+            } else { throw new Error('Failed to deduct credit.'); }
             stopLoadingUI();
             return;
         }
@@ -201,7 +238,6 @@ async function generateImage(prompt) {
         currentUserCredits = deductData.newCredits;
         updateCreditDisplay();
 
-        // Then generate image
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
             headers: {
@@ -229,7 +265,7 @@ async function generateImage(prompt) {
     } catch (error) {
         console.error('Image generation failed:', error);
         showMessage(`Sorry, we couldn't generate the image. ${error.message}`, 'error');
-        updateUIForAuthState(auth.currentUser); // Refresh credits on error
+        updateUIForAuthState(auth.currentUser);
     } finally {
         stopLoadingUI();
     }
@@ -240,7 +276,7 @@ function startLoadingUI() {
     DOMElements.messageBox.innerHTML = '';
     DOMElements.loadingIndicator.classList.remove('hidden');
     DOMElements.generateBtn.disabled = true;
-    DOMElements.generateBtn.textContent = 'Generating...';
+    DOMElements.generateBtn.innerHTML = `<span class="loader"></span>`;
 }
 
 function stopLoadingUI() {
@@ -259,18 +295,176 @@ function displayImage(imageUrl, prompt) {
     img.alt = prompt;
 
     galleryItem.appendChild(img);
+    galleryItem.addEventListener('click', () => openQuickView(imageUrl, prompt));
 
-    // Prepend to gallery for instant visibility
+
     DOMElements.imageGallery.prepend(galleryItem);
     
-    // Use imagesLoaded to wait for the new image before relaying out Masonry
     imagesLoaded(DOMElements.imageGallery, function() {
         masonry.prepended(galleryItem);
         masonry.layout();
     });
 }
 
-// --- Initializations for Animations and Components ---
+// --- Dynamic UI Initializations ---
+
+function initializeHeroCanvas() {
+    const canvas = document.getElementById('hero-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null };
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 1.5 + 0.5;
+            this.speedX = Math.random() * 2 - 1;
+            this.speedY = Math.random() * 2 - 1;
+            this.color = 'rgba(255, 255, 255, 0.7)';
+        }
+        update() {
+            if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
+            if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+            this.x += this.speedX;
+            this.y += this.speedY;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function initParticles() {
+        for (let i = 0; i < 100; i++) {
+            particles.push(new Particle());
+        }
+    }
+    initParticles();
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+        }
+        connectParticles();
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    function connectParticles() {
+        for (let a = 0; a < particles.length; a++) {
+            for (let b = a; b < particles.length; b++) {
+                let distance = Math.sqrt(
+                    (particles[a].x - particles[b].x) ** 2 +
+                    (particles[a].y - particles[b].y) ** 2
+                );
+                if (distance < 120) {
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - distance/120})`;
+                    ctx.lineWidth = 0.2;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[a].x, particles[a].y);
+                    ctx.lineTo(particles[b].x, particles[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+}
+
+let suggestionTimeout;
+function initializePromptSuggestions() {
+    DOMElements.promptInput?.addEventListener('input', () => {
+        clearTimeout(suggestionTimeout);
+        const prompt = DOMElements.promptInput.value.trim();
+
+        if (prompt.length < 10) {
+            DOMElements.promptSuggestions.innerHTML = '';
+            return;
+        }
+
+        suggestionTimeout = setTimeout(() => {
+            fetchSuggestions(prompt);
+        }, 500); // Debounce
+    });
+}
+
+async function fetchSuggestions(prompt) {
+    try {
+        // This is a mock API call, replace with your actual API
+        const suggestions = await mockSuggestionAPI(prompt); 
+        
+        DOMElements.promptSuggestions.innerHTML = '';
+        suggestions.forEach((suggestion, index) => {
+            const button = document.createElement('button');
+            button.className = 'prompt-suggestion-btn';
+            button.textContent = `+ ${suggestion}`;
+            button.style.animationDelay = `${index * 100}ms`;
+            button.onclick = () => {
+                DOMElements.promptInput.value += `, ${suggestion}`;
+                DOMElements.promptInput.focus();
+                 DOMElements.promptSuggestions.innerHTML = '';
+            };
+            DOMElements.promptSuggestions.appendChild(button);
+        });
+    } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+    }
+}
+
+async function mockSuggestionAPI(prompt) {
+    // This function simulates an API call.
+    // Replace this with a real fetch to your /api/suggest endpoint.
+    console.log("Fetching suggestions for:", prompt);
+    const mockResponses = [
+        ["cinematic lighting", "hyperrealistic", "8k resolution"],
+        ["fantasy art style", "glowing details", "epic scale"],
+        ["vaporwave aesthetic", "neon colors", "dreamlike"]
+    ];
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve(mockResponses[Math.floor(Math.random() * mockResponses.length)]);
+        }, 300);
+    });
+}
+
+function initializeQuickViewModal() {
+    DOMElements.closeQuickViewBtn?.addEventListener('click', () => toggleModal(DOMElements.quickViewModal, false));
+    DOMElements.quickViewModal?.addEventListener('click', (e) => {
+        if (e.target === DOMElements.quickViewModal) {
+            toggleModal(DOMElements.quickViewModal, false);
+        }
+    });
+    DOMElements.copyPromptBtn?.addEventListener('click', () => {
+        navigator.clipboard.writeText(DOMElements.quickViewPrompt.textContent);
+        DOMElements.copyPromptBtn.textContent = "Copied!";
+        setTimeout(() => DOMElements.copyPromptBtn.textContent = "Copy Prompt", 2000);
+    });
+}
+
+function openQuickView(imageUrl, prompt) {
+    DOMElements.quickViewImage.src = imageUrl;
+    DOMElements.quickViewPrompt.textContent = prompt;
+    toggleModal(DOMElements.quickViewModal, true);
+}
+
+
 function initializeGallery() {
      masonry = new Masonry(DOMElements.imageGallery, {
         itemSelector: '.gallery-item',
@@ -278,7 +472,7 @@ function initializeGallery() {
         percentPosition: true,
         gutter: 16
     });
-    // Add some initial placeholder images for design
+
     const initialImages = [
         'https://placehold.co/600x800/e6f0ff/0052cc?text=GenArt',
         'https://placehold.co/600x600/e6f0ff/0052cc?text=GenArt',
@@ -288,9 +482,10 @@ function initializeGallery() {
         'https://placehold.co/600x850/e6f0ff/0052cc?text=GenArt',
     ];
 
-    initialImages.forEach(src => {
+    initialImages.forEach((src, index) => {
         const item = document.createElement('div');
         item.className = 'gallery-item';
+        item.style.animationDelay = `${index * 100}ms`;
         const img = document.createElement('img');
         img.src = src;
         img.alt = 'AI Generated Art Example';
@@ -299,12 +494,10 @@ function initializeGallery() {
     });
     
     imagesLoaded( DOMElements.imageGallery ).on( 'progress', function() {
-      // layout Masonry after each image loads
       DOMElements.imageGallery.classList.add('loaded');
       masonry.layout();
     });
 }
-
 
 function initializeScrollAnimations() {
     const observer = new IntersectionObserver((entries) => {
@@ -314,20 +507,40 @@ function initializeScrollAnimations() {
                 if (entry.target.dataset.counter) {
                     animateCounter(entry.target);
                 }
+                if (entry.target.dataset.typewriter) {
+                    runTypewriter(entry.target);
+                }
                 observer.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.2 });
 
-    document.querySelectorAll('.feature-card, .about-text, .about-visual, [data-counter]').forEach(el => {
+    document.querySelectorAll('.feature-card, .about-text, .about-visual, [data-counter], [data-typewriter]').forEach(el => {
         observer.observe(el);
     });
+}
+
+function runTypewriter(element) {
+    const text = element.dataset.typewriter;
+    element.innerHTML = '';
+    let i = 0;
+    const typing = setInterval(() => {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+        } else {
+            clearInterval(typing);
+            const cursor = element.querySelector('.typewriter-cursor');
+            if(cursor) cursor.style.display = 'none';
+        }
+    }, 50);
+     element.innerHTML += '<span class="typewriter-cursor"></span>';
 }
 
 function animateCounter(element) {
     const target = +element.dataset.counter;
     let current = 0;
-    const increment = target / 200; // Animation speed
+    const increment = target / 150;
 
     const updateCounter = () => {
         current += increment;
@@ -375,7 +588,6 @@ function initializeShowcaseSlider() {
         });
     });
 
-    // Initial load
     loadCategory('art');
 }
 
