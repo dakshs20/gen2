@@ -1,7 +1,6 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -15,226 +14,151 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 // --- Global State ---
-let currentUser;
 let currentUserCredits = 0;
 let isGenerating = false;
-let currentAspectRatio = '1:1';
-let uploadedImageData = null;
-let isFetchingMore = false;
-
-// The full list of gallery images.
-const ALL_IMAGE_URLS = [
-    "https://iili.io/K7bN7Hl.md.png", "https://iili.io/K7bOTzP.md.png", "https://iili.io/K7yYoqN.md.png",
-    "https://iili.io/K7bk3Ku.md.png", "https://iili.io/K7b6OPV.md.png", "https://iili.io/K7be88v.md.png",
-    "https://iili.io/K7b894e.md.png", "https://iili.io/K7y1cUN.md.png", "https://iili.io/K7yEx14.md.png",
-    "https://iili.io/K7b4VQR.md.png", "https://iili.io/K7yGhS2.md.png", "https://iili.io/K7bs5wg.md.png",
-    "https://iili.io/K7bDzpS.md.png", "https://iili.io/K7yVVv2.md.png", "https://iili.io/K7bmj7R.md.png",
-    "https://iili.io/K7bP679.md.png"
-];
-
-// Start index for infinite scroll, after the initial hardcoded images.
-let nextImageIndex = 10; 
+let masonry;
 
 // --- DOM Element Caching ---
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    const ids = [
-        'header-nav', 'auth-modal', 'google-signin-btn', 'out-of-credits-modal',
-        'prompt-input', 'generate-btn', 'generate-icon', 'loading-spinner',
-        'image-upload-btn', 'image-upload-input', 'remove-image-btn',
-        'image-preview-container', 'image-preview', 'masonry-gallery', 'gallery-container', 'loader',
-        'ratio-btn', 'ratio-options', 'header-blur-overlay'
-    ];
-    ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
-    
-    DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
-
+    cacheDOMElements();
     initializeEventListeners();
-    initializeImageLoading(); // New function for instant loading effect
-    onAuthStateChanged(auth, user => {
-        currentUser = user;
-        updateUIForAuthState(user);
-    });
+    initializeScrollAnimations();
+    initializeShowcaseSlider();
+    initializeGallery();
 });
 
+function cacheDOMElements() {
+    DOMElements.authBtn = document.getElementById('auth-btn');
+    DOMElements.authModal = document.getElementById('auth-modal');
+    DOMElements.googleSignInBtn = document.getElementById('google-signin-btn');
+    DOMElements.closeModalBtn = document.getElementById('close-modal-btn');
+    DOMElements.outOfCreditsModal = document.getElementById('out-of-credits-modal');
+    DOMElements.closeCreditsModalBtn = document.getElementById('close-credits-modal-btn');
+    DOMElements.welcomeCreditsModal = document.getElementById('welcome-credits-modal');
+    DOMElements.closeWelcomeModalBtn = document.getElementById('close-welcome-modal-btn');
+    DOMElements.freeCreditsAmount = document.getElementById('free-credits-amount');
+    DOMElements.generationCounter = document.getElementById('generation-counter');
+    DOMElements.promptInput = document.getElementById('prompt-input');
+    DOMElements.generateBtn = document.getElementById('generate-btn');
+    DOMElements.tryNowBtn = document.getElementById('try-now-btn');
+    DOMElements.ctaBtn = document.getElementById('cta-btn');
+    DOMElements.loadingIndicator = document.getElementById('loading-indicator');
+    DOMElements.imageGallery = document.getElementById('image-gallery');
+    DOMElements.messageBox = document.getElementById('message-box');
+}
+
 function initializeEventListeners() {
+    onAuthStateChanged(auth, user => updateUIForAuthState(user));
+
+    DOMElements.authBtn?.addEventListener('click', handleAuthAction);
     DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-    DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
+    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
+    
+    DOMElements.closeCreditsModalBtn?.addEventListener('click', () => toggleModal(DOMElements.outOfCreditsModal, false));
+    DOMElements.closeWelcomeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.welcomeCreditsModal, false));
+
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     
-    // New: Listen for 'Enter' key press on the prompt input
-    DOMElements.promptInput?.addEventListener('keydown', (event) => {
-        // Trigger generation if Enter is pressed without the Shift key
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault(); // Prevents adding a new line in the textarea
-            handleImageGenerationRequest();
-        }
-    });
-    
-    DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
-    DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
-    DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
+    const generatorSection = document.getElementById('generator');
+    DOMElements.tryNowBtn?.addEventListener('click', () => generatorSection.scrollIntoView({ behavior: 'smooth' }));
+    DOMElements.ctaBtn?.addEventListener('click', () => generatorSection.scrollIntoView({ behavior: 'smooth' }));
 
-    // Aspect Ratio Dropdown
-    DOMElements.ratioBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        DOMElements.ratioOptions.classList.toggle('hidden');
-    });
-    document.addEventListener('click', () => DOMElements.ratioOptions?.classList.add('hidden'));
-    
-    document.querySelectorAll('.ratio-option').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            currentAspectRatio = e.currentTarget.dataset.ratio;
-            document.querySelectorAll('.ratio-option').forEach(b => b.classList.remove('selected'));
-            e.currentTarget.classList.add('selected');
-        });
-    });
-
-    // Combined Scroll Listener for Gallery
-    DOMElements.galleryContainer.addEventListener('scroll', () => {
-        const { scrollTop, scrollHeight, clientHeight } = DOMElements.galleryContainer;
-        
-        // Header blur fade effect
-        if (scrollTop > 20) { 
-            DOMElements.headerBlurOverlay.classList.add('opacity-100');
-        } else {
-            DOMElements.headerBlurOverlay.classList.remove('opacity-100');
-        }
-
-        // Infinite scroll logic
-        if (scrollTop + clientHeight >= scrollHeight - 300 && !isFetchingMore) {
-            fetchMoreImages();
+    DOMElements.promptInput?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            DOMElements.generateBtn.click();
         }
     });
 }
-
-// --- NEW: Instant Image Loading Logic ---
-function initializeImageLoading() {
-    const images = document.querySelectorAll('.masonry-item img');
-    images.forEach(img => {
-        // If image is already cached by the browser, reveal it instantly
-        if (img.complete) {
-            img.classList.add('loaded');
-        } else {
-            // Otherwise, add an event listener to reveal it when it's done
-            img.addEventListener('load', () => {
-                img.classList.add('loaded');
-            });
-        }
-    });
-}
-
 
 // --- UI & State Management ---
+function toggleModal(modal, show) {
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', String(!show));
+}
 
-function updateUIForAuthState(user) {
-    const nav = DOMElements.headerNav;
-    if (!nav) return;
-
+async function updateUIForAuthState(user) {
     if (user) {
-        nav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
-            <div id="generation-counter" class="text-sm font-medium text-gray-700">Loading...</div>
-            <button id="auth-action-btn" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Sign Out</button>
-        `;
-        document.getElementById('auth-action-btn').addEventListener('click', () => signOut(auth));
-        fetchUserCredits(user);
+        DOMElements.authBtn.textContent = 'Sign Out';
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!response.ok) throw new Error('Credit fetch failed');
+            
+            const data = await response.json();
+            currentUserCredits = data.credits;
+            updateCreditDisplay();
+
+            if (data.isNewUser && data.credits > 0) {
+                if (DOMElements.freeCreditsAmount) DOMElements.freeCreditsAmount.textContent = data.credits;
+                toggleModal(DOMElements.welcomeCreditsModal, true);
+            }
+        } catch (error) {
+            console.error("Credit fetch error:", error);
+            currentUserCredits = 0;
+            updateCreditDisplay();
+            showMessage("Could not fetch your credit balance.", "error");
+        }
     } else {
-        nav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
-            <button id="auth-action-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-700 transition-all">Sign In</button>
-        `;
-        document.getElementById('auth-action-btn').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
+        currentUserCredits = 0;
+        DOMElements.authBtn.textContent = 'Sign In';
+        updateCreditDisplay();
     }
 }
 
-async function fetchUserCredits(user) {
-    try {
-        const token = await user.getIdToken();
-        const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!response.ok) throw new Error('Failed to fetch credits');
-        const data = await response.json();
-        currentUserCredits = data.credits;
-        const counter = document.getElementById('generation-counter');
-        if (counter) counter.textContent = `Credits: ${currentUserCredits}`;
-    } catch (error) {
-        console.error("Error fetching credits:", error);
-        const counter = document.getElementById('generation-counter');
-        if (counter) counter.textContent = "Credits: Error";
+function updateCreditDisplay() {
+    const text = auth.currentUser ? `${currentUserCredits} Credits` : '';
+    if(DOMElements.generationCounter) DOMElements.generationCounter.textContent = text;
+}
+
+function showMessage(text, type = 'info') {
+    const messageEl = document.createElement('div');
+    const color = type === 'error' ? 'red' : 'blue';
+    messageEl.className = `p-4 rounded-lg bg-${color}-100 text-${color}-700 animate-fade-in-up`;
+    messageEl.textContent = text;
+    DOMElements.messageBox.innerHTML = '';
+    DOMElements.messageBox.appendChild(messageEl);
+}
+
+// --- Core Application Logic ---
+function handleAuthAction() {
+    if (auth.currentUser) {
+        signOut(auth).catch(error => console.error("Sign out error:", error));
+    } else {
+        toggleModal(DOMElements.authModal, true);
     }
 }
 
-
-// --- Image Gallery & Infinite Scroll ---
-
-function addImageToGallery(imageUrl, isNew = false) {
-    const gallery = DOMElements.masonryGallery;
-    const item = document.createElement('div');
-    item.className = 'masonry-item';
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.className = 'rounded-lg w-full h-auto block';
-    img.loading = 'lazy';
-    img.alt = 'Generated Art';
-    
-    // Apply the same loading logic to dynamically added images
-    if (img.complete) {
-        img.classList.add('loaded');
-    } else {
-        img.addEventListener('load', () => {
-            img.classList.add('loaded');
+function signInWithGoogle() {
+    signInWithPopup(auth, provider)
+        .then(() => toggleModal(DOMElements.authModal, false))
+        .catch(error => {
+            console.error("Authentication Error:", error);
+            showMessage('Failed to sign in. Please try again.', 'error');
         });
-    }
-
-    item.appendChild(img);
-
-    if (isNew) {
-        gallery.insertBefore(item, gallery.firstChild);
-    } else {
-        gallery.appendChild(item);
-    }
 }
 
-function fetchMoreImages() {
-    if (nextImageIndex >= ALL_IMAGE_URLS.length) {
-        DOMElements.loader.style.display = 'none';
-        return;
-    }
-
-    isFetchingMore = true;
-    DOMElements.loader.style.display = 'block';
-
-    setTimeout(() => {
-        const imagesToLoad = ALL_IMAGE_URLS.slice(nextImageIndex, nextImageIndex + 5);
-        imagesToLoad.forEach(url => addImageToGallery(url));
-        nextImageIndex += 5;
-        isFetchingMore = false;
-        DOMElements.loader.style.display = 'none';
-    }, 1000);
-}
-
-
-// --- Generation Logic ---
-
-async function handleImageGenerationRequest() {
+function handleImageGenerationRequest() {
     if (isGenerating) return;
-    if (!currentUser) {
+
+    if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
+
     if (currentUserCredits <= 0) {
         toggleModal(DOMElements.outOfCreditsModal, true);
         return;
     }
+
     const prompt = DOMElements.promptInput.value.trim();
-    if (!prompt && !uploadedImageData) {
-        DOMElements.promptInput.classList.add('placeholder-red-400');
-        setTimeout(() => DOMElements.promptInput.classList.remove('placeholder-red-400'), 1000);
+    if (!prompt) {
+        showMessage('Please describe what you want to create.', 'error');
         return;
     }
     
@@ -242,100 +166,203 @@ async function handleImageGenerationRequest() {
 }
 
 async function generateImage(prompt) {
-    setLoadingState(true);
-    try {
-        const token = await currentUser.getIdToken();
-        
-        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
-        if (!deductResponse.ok) throw new Error('Credit deduction failed');
-        
-        const body = { prompt, aspectRatio: currentAspectRatio };
-        if (uploadedImageData) {
-            body.imageData = uploadedImageData;
-        }
+    isGenerating = true;
+    startLoadingUI();
 
+    try {
+        const token = await auth.currentUser.getIdToken();
+        
+        // Deduct credit first
+        const deductResponse = await fetch('/api/credits', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!deductResponse.ok) {
+            if (deductResponse.status === 402) {
+                toggleModal(DOMElements.outOfCreditsModal, true);
+            } else {
+                throw new Error('Failed to deduct credit.');
+            }
+            stopLoadingUI();
+            return;
+        }
+        
+        const deductData = await deductResponse.json();
+        currentUserCredits = deductData.newCredits;
+        updateCreditDisplay();
+
+        // Then generate image
         const generateResponse = await fetch('/api/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(body)
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ prompt, aspectRatio: "1:1" })
         });
-        if (!generateResponse.ok) {
-            const errorData = await generateResponse.json();
-            throw new Error(errorData.error || 'API generation failed');
-        }
-        
-        const result = await generateResponse.json();
-        
-        const base64Data = uploadedImageData 
-            ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data 
-            : result.predictions?.[0]?.bytesBase64Encoded;
 
-        if (!base64Data) throw new Error("No image data in API response");
-        
-        addImageToGallery(`data:image/png;base64,${base64Data}`, true);
-        await fetchUserCredits(currentUser);
-        resetPromptBar();
+        if (!generateResponse.ok) {
+            const errorResult = await generateResponse.json();
+            throw new Error(errorResult.error || `API Error: ${generateResponse.status}`);
+        }
+
+        const result = await generateResponse.json();
+        const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
+
+        if (!base64Data) {
+            throw new Error("No image data received from API.");
+        }
+
+        const imageUrl = `data:image/png;base64,${base64Data}`;
+        displayImage(imageUrl, prompt);
 
     } catch (error) {
-        console.error("Generation Error:", error);
+        console.error('Image generation failed:', error);
+        showMessage(`Sorry, we couldn't generate the image. ${error.message}`, 'error');
+        updateUIForAuthState(auth.currentUser); // Refresh credits on error
     } finally {
-        setLoadingState(false);
+        stopLoadingUI();
     }
 }
 
-
-// --- Image Upload Handling ---
-
-function handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        uploadedImageData = { mimeType: file.type, data: reader.result.split(',')[1] };
-        DOMElements.imagePreview.src = reader.result;
-        DOMElements.imagePreviewContainer.classList.remove('hidden');
-        DOMElements.imageUploadBtn.classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
+// --- UI Updates for Generation ---
+function startLoadingUI() {
+    DOMElements.messageBox.innerHTML = '';
+    DOMElements.loadingIndicator.classList.remove('hidden');
+    DOMElements.generateBtn.disabled = true;
+    DOMElements.generateBtn.textContent = 'Generating...';
 }
 
-function removeUploadedImage() {
-    uploadedImageData = null;
-    DOMElements.imageUploadInput.value = '';
-    DOMElements.imagePreviewContainer.classList.add('hidden');
-    DOMElements.imageUploadBtn.classList.remove('hidden');
+function stopLoadingUI() {
+    isGenerating = false;
+    DOMElements.loadingIndicator.classList.add('hidden');
+    DOMElements.generateBtn.disabled = false;
+    DOMElements.generateBtn.textContent = 'Generate';
 }
 
+function displayImage(imageUrl, prompt) {
+    const galleryItem = document.createElement('div');
+    galleryItem.className = 'gallery-item';
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = prompt;
 
-// --- UI Helpers ---
+    galleryItem.appendChild(img);
 
-function setLoadingState(isLoading) {
-    isGenerating = isLoading;
-    DOMElements.generateBtn.disabled = isLoading;
-    DOMElements.generateIcon.classList.toggle('hidden', isLoading);
-    DOMElements.loadingSpinner.classList.toggle('hidden', !isLoading);
-}
-
-function resetPromptBar() {
-    DOMElements.promptInput.value = '';
-    removeUploadedImage();
-}
-
-function toggleModal(modal, show) {
-    if (!modal) return;
-    modal.setAttribute('aria-hidden', String(!show));
-}
-
-function closeAllModals() {
-    document.querySelectorAll('[role="dialog"], [id*="-modal"]').forEach(modal => {
-        toggleModal(modal, false);
+    // Prepend to gallery for instant visibility
+    DOMElements.imageGallery.prepend(galleryItem);
+    
+    // Use imagesLoaded to wait for the new image before relaying out Masonry
+    imagesLoaded(DOMElements.imageGallery, function() {
+        masonry.prepended(galleryItem);
+        masonry.layout();
     });
 }
 
-function signInWithGoogle() {
-    signInWithPopup(auth, provider)
-      .then(() => closeAllModals())
-      .catch(console.error);
+// --- Initializations for Animations and Components ---
+function initializeGallery() {
+     masonry = new Masonry(DOMElements.imageGallery, {
+        itemSelector: '.gallery-item',
+        columnWidth: '.gallery-item',
+        percentPosition: true,
+        gutter: 16
+    });
+    // Add some initial placeholder images for design
+    const initialImages = [
+        'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/kMh0iA3.png',
+        'https://i.imgur.com/5uV9nB5.png', 'https://i.imgur.com/sUTb5oT.png',
+        'https://i.imgur.com/M5S1VKH.png', 'https://i.imgur.com/dAmY8ob.png'
+    ];
+
+    initialImages.forEach(src => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'AI Generated Art Example';
+        item.appendChild(img);
+        DOMElements.imageGallery.appendChild(item);
+    });
+    
+    imagesLoaded( DOMElements.imageGallery ).on( 'progress', function() {
+      // layout Masonry after each image loads
+      DOMElements.imageGallery.classList.add('loaded');
+      masonry.layout();
+    });
 }
 
 
+function initializeScrollAnimations() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                if (entry.target.dataset.counter) {
+                    animateCounter(entry.target);
+                }
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.feature-card, .about-text, .about-visual, [data-counter]').forEach(el => {
+        observer.observe(el);
+    });
+}
+
+function animateCounter(element) {
+    const target = +element.dataset.counter;
+    let current = 0;
+    const increment = target / 200; // Animation speed
+
+    const updateCounter = () => {
+        current += increment;
+        if (current < target) {
+            element.innerText = Math.ceil(current).toLocaleString();
+            requestAnimationFrame(updateCounter);
+        } else {
+            element.innerText = target.toLocaleString() + '+';
+        }
+    };
+    updateCounter();
+}
+
+function initializeShowcaseSlider() {
+    const tabs = document.querySelectorAll('.showcase-tab');
+    const slider = document.querySelector('.showcase-slider');
+    if (!tabs.length || !slider) return;
+
+    const images = {
+        art: ['https://i.imgur.com/5uV9nB5.png', 'https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/M5S1VKH.png'],
+        photography: ['https://i.imgur.com/kMh0iA3.png', 'https://i.imgur.com/dAmY8ob.png', 'https://i.imgur.com/wYQmS28.png'],
+        marketing: ['https://i.imgur.com/M5S1VKH.png', 'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/kMh0iA3.png'],
+        '3d': ['https://i.imgur.com/dAmY8ob.png', 'https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/5uV9nB5.png'],
+        concept: ['https://i.imgur.com/sUTb5oT.png', 'https://i.imgur.com/wYQmS28.png', 'https://i.imgur.com/M5S1VKH.png'],
+    };
+
+    function loadCategory(category) {
+        slider.innerHTML = '';
+        images[category].forEach(src => {
+            const item = document.createElement('div');
+            item.className = 'showcase-item';
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = `${category} showcase image`;
+            item.appendChild(img);
+            slider.appendChild(item);
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            loadCategory(tab.dataset.category);
+        });
+    });
+
+    // Initial load
+    loadCategory('art');
+}
