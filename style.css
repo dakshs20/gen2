@@ -1,4 +1,125 @@
-/* ... existing code ... -->
+/* --- Base Styles --- */
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    color: #374151; /* gray-700 */
+}
+
+/* --- Full-page Animated Gradient Background --- */
+#animated-gradient-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(125deg, #e0f2fe, #f5f3ff, #f0fdf4, #f5f3ff, #e0f2fe);
+    background-size: 400% 400%;
+    animation: gradient-flow 20s ease-in-out infinite;
+    will-change: background-position;
+}
+
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+header.scrolled #header-nav {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* --- Hero, Stats, and Masonry Sections --- */
+#hero-headline {
+    opacity: 0;
+}
+#hero-subline {
+    opacity: 0;
+    transform: translateY(20px);
+}
+.stat-card {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+    will-change: transform, opacity;
+}
+.cursor {
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+    from, to { color: transparent; }
+    50% { color: #517CBE; }
+}
+
+/* --- Masonry Gallery Layout --- */
+#masonry-gallery { display: flex; gap: 1rem; }
+.masonry-column { display: flex; flex-direction: column; flex: 1; gap: 1rem; }
+.masonry-item {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background-color: #e2e8f0;
+    min-height: 150px;
+    animation: shimmer 2s infinite linear;
+    background-image: linear-gradient(to right, #e2e8f0 0%, #f1f5f9 20%, #e2e8f0 40%, #e2e8f0 100%);
+    background-repeat: no-repeat;
+    background-size: 1000px 100%; 
+}
+@keyframes shimmer {
+    0% { background-position: -500px 0; }
+    100% { background-position: 500px 0; }
+}
+.masonry-item img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0.75rem;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* --- Prompt Bar & UI --- */
+#prompt-input { max-height: 150px; }
+#prompt-bar-container { transition: border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+#prompt-bar-container.expanded { border-radius: 1.75rem; }
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+.animate-shake { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
+
+
+/* --- Testimonial Section --- */
+.testimonial-image {
+    border-radius: 1.5rem;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.testimonial-card {
+    background-color: #517CBE;
+    color: white;
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(81, 124, 190, 0.25);
+}
+
+.testimonial-text {
+    font-size: 1.25rem;
+    line-height: 1.75;
+    font-weight: 500;
+}
+
+.testimonial-author {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* --- Dynamic Use Cases Section --- */
+#use-cases-section {
+    /* This section acts as a trigger and will be pinned via JS */
+}
+
 .use-cases-content {
     height: 100vh;
     width: 100%;
@@ -28,14 +149,13 @@
 }
 
 .use-case-text {
-    font-family: 'Merriweather', serif; /* Applied new font */
     position: absolute;
     inset: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 4.5rem; /* text-7xl, bigger */
-    font-weight: 900; /* Heavier weight for impact */
+    font-weight: 800;
     color: #517CBE;
     opacity: 0; /* Initially hidden for animation */
     transform: translateY(30px);
@@ -83,5 +203,4 @@
         font-size: 3rem; /* text-5xl, bigger on mobile */
     }
 }
-
 
