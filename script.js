@@ -34,14 +34,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const ids = [
         'header-nav', 'gallery-container', 'masonry-gallery', 'prompt-input',
         'generate-btn', 'generate-icon', 'loading-spinner', 'ratio-btn', 'ratio-options',
-        'auth-modal', 'google-signin-btn', 'out-of-credits-modal', 'loading-overlay',
-        'timer-text', 'preview-modal', 'preview-image', 'preview-prompt-input',
-        'download-btn', 'close-preview-btn', 'regenerate-btn', 'header-blur-overlay',
+        'auth-modal', 'google-signin-btn', 'out-of-credits-modal', 
+        'preview-modal', 'preview-image', 'preview-prompt-input',
+        'download-btn', 'close-preview-btn', 'regenerate-btn',
         'image-upload-btn', 'image-upload-input', 'image-preview-container', 'image-preview', 'remove-image-btn',
         'preview-input-image-container', 'preview-input-image', 'change-input-image-btn', 'remove-input-image-btn', 'preview-image-upload-input',
-        'hero-headline'
+        'hero-section', 'hero-headline', 'hero-subline', 'typewriter', 'prompt-bar-container',
+        'mobile-menu', 'mobile-menu-btn', 'menu-open-icon', 'menu-close-icon',
+        'button-timer', 'button-content'
     ];
-    ids.forEach(id => DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id));
+    ids.forEach(id => {
+        if (id) {
+            DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id);
+        }
+    });
     DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
     DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option');
     DOMElements.masonryColumns = document.querySelectorAll('.masonry-column');
@@ -66,7 +72,6 @@ function restructureGalleryForMobile() {
     }
 }
 
-
 function initializeEventListeners() {
     DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
@@ -87,9 +92,11 @@ function initializeEventListeners() {
 
     DOMElements.ratioBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        DOMElements.ratioOptions.classList.toggle('hidden');
+        if (!DOMElements.ratioBtn.disabled) {
+            DOMElements.ratioOptions.classList.toggle('hidden');
+        }
     });
-    document.addEventListener('click', () => DOMElements.ratioOptions.classList.add('hidden'));
+    document.addEventListener('click', () => DOMElements.ratioOptions?.classList.add('hidden'));
     DOMElements.ratioOptionBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             currentAspectRatio = e.currentTarget.dataset.ratio;
@@ -98,78 +105,139 @@ function initializeEventListeners() {
         });
     });
 
-    DOMElements.galleryContainer?.addEventListener('scroll', () => {
-        const overlay = DOMElements.headerBlurOverlay;
-        if (DOMElements.galleryContainer.scrollTop > 50) {
-            overlay.classList.remove('opacity-0');
-        } else {
-            overlay.classList.add('opacity-0');
-        }
-    });
-
     DOMElements.closePreviewBtn?.addEventListener('click', () => toggleModal(DOMElements.previewModal, false));
     DOMElements.downloadBtn?.addEventListener('click', downloadPreviewImage);
     DOMElements.regenerateBtn?.addEventListener('click', handleRegeneration);
     DOMElements.changeInputImageBtn?.addEventListener('click', () => DOMElements.previewImageUploadInput.click());
     DOMElements.previewImageUploadInput?.addEventListener('change', handlePreviewImageChange);
     DOMElements.removeInputImageBtn?.addEventListener('click', removePreviewInputImage);
+    
+    DOMElements.mobileMenuBtn?.addEventListener('click', () => {
+        const isHidden = DOMElements.mobileMenu.classList.toggle('hidden');
+        DOMElements.menuOpenIcon.classList.toggle('hidden', !isHidden);
+        DOMElements.menuCloseIcon.classList.toggle('hidden', isHidden);
+    });
+
+    window.addEventListener('scroll', () => {
+        const header = document.querySelector('header');
+        if (window.scrollY > 10) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
 }
 
-// --- NEW: Animations ---
+// --- Animations ---
 function initializeAnimations() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
+    
+    gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-    // Animate Hero Headline
-    gsap.to(DOMElements.heroHeadline, {
-        opacity: 1,
-        y: 0,
-        duration: 1,
-        ease: 'power3.out',
-        delay: 0.2
+    // Simple fade-in for hero headline
+    gsap.fromTo(DOMElements.heroHeadline, 
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 }
+    );
+
+    gsap.fromTo(DOMElements.heroSubline, 
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 }
+    );
+
+    const words = ["creators.", "agencies.", "enterprises."];
+    let masterTl = gsap.timeline({ repeat: -1 });
+    words.forEach(word => {
+        let tl = gsap.timeline({ repeat: 1, yoyo: true, repeatDelay: 1.5 });
+        tl.to("#typewriter", { text: word, duration: 1, ease: "none" });
+        masterTl.add(tl);
     });
-
-    // Animate Stat Cards
-    gsap.to(DOMElements.statCards, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power3.out',
-        scrollTrigger: {
-            trigger: "#stats-section",
-            start: "top 85%",
-        }
-    });
-
-    // Animate Counters
-    DOMElements.counters.forEach(counter => {
-        const target = +counter.dataset.target;
-        gsap.to(counter, {
-            textContent: target,
-            duration: 2,
-            ease: "power2.out",
-            snap: { textContent: 1 },
-            scrollTrigger: {
-                trigger: counter,
-                start: "top 90%",
-            },
-            onUpdate: function() {
-                // Add K or M for thousands or millions
-                const currentVal = Math.ceil(this.targets()[0].textContent);
-                if (target >= 1000) {
-                     counter.textContent = Math.ceil(currentVal / 100) / 10 + "K";
-                } else {
-                     counter.textContent = currentVal;
+    
+    if (DOMElements.statCards.length > 0) {
+        gsap.fromTo(DOMElements.statCards, 
+            { opacity: 0, y: 30, scale: 0.95 },
+            { 
+                opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: "#stats-section",
+                    start: "top 85%",
                 }
-            },
-             onComplete: function() {
-                if (target >= 1000000) counter.textContent = target / 1000000 + "M";
-                else if (target >= 1000) counter.textContent = target / 1000 + "K";
-                else counter.textContent = target;
+            }
+        );
+    }
+
+    if (DOMElements.counters.length > 0) {
+        DOMElements.counters.forEach(counter => {
+            const target = +counter.dataset.target;
+            const proxy = { val: 0 }; 
+
+            gsap.to(proxy, {
+                val: target,
+                duration: 2.5,
+                ease: "power2.out",
+                scrollTrigger: {
+                    trigger: counter,
+                    start: "top 90%",
+                },
+                onUpdate: function() {
+                    counter.textContent = Math.ceil(proxy.val);
+                }
+            });
+        });
+    }
+
+    // Testimonial Animation
+    const testimonialSection = document.getElementById('testimonial-section');
+    if(testimonialSection) {
+        gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), {
+            opacity: 0,
+            y: 50,
+            duration: 1,
+            stagger: 0.2,
+            ease: 'power3.out',
+            scrollTrigger: {
+                trigger: testimonialSection,
+                start: "top 80%",
             }
         });
-    });
+    }
+
+    // Dynamic Use Cases Scroll Animation
+    const useCasesSection = document.getElementById('use-cases-section');
+    if (useCasesSection) {
+        const useCasesHeadline = useCasesSection.querySelector(".use-cases-headline");
+        const useCaseTexts = gsap.utils.toArray('.use-case-text');
+        
+        if (useCasesHeadline && useCaseTexts.length > 0) {
+            const tl = gsap.timeline();
+            
+            // Animate the headline and the first text item to appear
+            tl.to(useCasesHeadline, { opacity: 1, y: 0, duration: 0.3 });
+            tl.to(useCaseTexts[0], { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
+
+            // Loop through the rest of the text items to create sequential transitions
+            for (let i = 1; i < useCaseTexts.length; i++) {
+                // Animate out the previous text item and wait a moment before the next one
+                tl.to(useCaseTexts[i-1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.7");
+                // Animate in the current text item
+                tl.to(useCaseTexts[i], { opacity: 1, y: 0, duration: 0.3 });
+            }
+            
+            // Animate out the final text item and the headline
+            tl.to(useCaseTexts[useCaseTexts.length - 1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.7");
+            tl.to(useCasesHeadline, { opacity: 0, y: -30, duration: 0.3 }, "<"); // Animate out headline with the last text
+
+            ScrollTrigger.create({
+                trigger: useCasesSection,
+                start: "top top",
+                end: "+=250%", // Provides ample scroll distance for the animation to play out smoothly
+                pin: useCasesSection, // Pin the entire section
+                scrub: 0.8, // Smoothes the animation's link to the scrollbar
+                animation: tl,
+            });
+        }
+    }
 }
 
 
@@ -177,21 +245,35 @@ function initializeAnimations() {
 function updateUIForAuthState(user) {
     currentUser = user;
     const nav = DOMElements.headerNav;
+    const mobileNav = DOMElements.mobileMenu;
+
     if (user) {
         nav.innerHTML = `
-            <a href="about.html" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">About</a>
-            <div id="credits-counter" class="text-sm font-medium text-gray-700">Credits: ...</div>
-            <button id="sign-out-btn" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Sign Out</button>
+            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
+            <div id="credits-counter" class="text-sm font-medium text-gray-700 px-3 py-1">Credits: ...</div>
+            <button id="sign-out-btn-desktop" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Sign Out</button>
         `;
-        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
+        mobileNav.innerHTML = `
+            <a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a>
+            <div id="credits-counter-mobile" class="text-center text-lg font-semibold text-gray-700 p-3 my-2 border-y">Credits: ...</div>
+            <button id="sign-out-btn-mobile" class="w-full text-left text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Sign Out</button>
+        `;
+        document.getElementById('sign-out-btn-desktop').addEventListener('click', () => signOut(auth));
+        document.getElementById('sign-out-btn-mobile').addEventListener('click', () => signOut(auth));
         fetchUserCredits(user);
     } else {
         nav.innerHTML = `
-            <a href="about.html" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">About</a>
-            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Pricing</a>
-            <button id="sign-in-btn" class="text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-full hover:bg-blue-700 transition-colors">Sign In</button>
+            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
+            <button id="sign-in-btn-desktop" class="text-sm font-medium text-white px-4 py-1.5 rounded-full transition-colors" style="background-color: #517CBE;">Sign In</button>
         `;
-        document.getElementById('sign-in-btn').addEventListener('click', signInWithGoogle);
+         mobileNav.innerHTML = `
+            <a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a>
+            <div class="p-4 mt-4">
+                 <button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button>
+            </div>
+        `;
+        document.getElementById('sign-in-btn-desktop').addEventListener('click', signInWithGoogle);
+        document.getElementById('sign-in-btn-mobile').addEventListener('click', signInWithGoogle);
     }
 }
 
@@ -210,16 +292,28 @@ async function fetchUserCredits(user) {
 }
 
 function updateCreditsDisplay(amount) {
-    const creditsEl = document.getElementById('credits-counter');
-    if (creditsEl) {
-        creditsEl.textContent = `Credits: ${amount}`;
-    }
+    const creditsCounter = document.getElementById('credits-counter');
+    const creditsCounterMobile = document.getElementById('credits-counter-mobile');
+    if (creditsCounter) creditsCounter.textContent = `Credits: ${amount}`;
+    if (creditsCounterMobile) creditsCounterMobile.textContent = `Credits: ${amount}`;
 }
 
 function autoResizeTextarea(e) {
     const textarea = e.target;
+    const promptBarContainer = DOMElements.promptBarContainer;
+    if (!textarea || !promptBarContainer) return;
+
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
+
+    const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
+    const numLines = Math.round(textarea.scrollHeight / lineHeight);
+
+    if (numLines > 1) { 
+        promptBarContainer.classList.add('expanded');
+    } else {
+        promptBarContainer.classList.remove('expanded');
+    }
 }
 
 function toggleModal(modal, show) {
@@ -267,6 +361,7 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
     setLoadingState(true);
     startTimer();
     
+    const aspectRatioToSend = imageDataSource ? null : currentAspectRatio;
     const generationInputData = imageDataSource ? {...imageDataSource} : null;
 
     try {
@@ -286,7 +381,7 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, imageData: generationInputData, aspectRatio: currentAspectRatio })
+            body: JSON.stringify({ prompt, imageData: generationInputData, aspectRatio: aspectRatioToSend })
         });
 
         if (!response.ok) {
@@ -330,23 +425,23 @@ async function handleRegeneration() {
 function setLoadingState(isLoading) {
     isGenerating = isLoading;
     DOMElements.generateBtn.disabled = isLoading;
-    DOMElements.generateIcon.classList.toggle('hidden', isLoading);
-    DOMElements.loadingSpinner.classList.toggle('hidden', !isLoading);
-    if (isLoading) {
-        toggleModal(DOMElements.loadingOverlay, true);
-    } else {
-        toggleModal(DOMElements.loadingOverlay, false);
-    }
+    DOMElements.buttonContent.classList.toggle('hidden', isLoading);
+    DOMElements.buttonTimer.classList.toggle('hidden', !isLoading);
 }
 
 function startTimer() {
-    let seconds = 17;
-    DOMElements.timerText.textContent = `${seconds}s`;
+    let endTime = Date.now() + 17000;
+    DOMElements.buttonTimer.textContent = '17.00';
+    
     timerInterval = setInterval(() => {
-        seconds--;
-        DOMElements.timerText.textContent = `${seconds}s`;
-        if (seconds <= 0) clearInterval(timerInterval);
-    }, 1000);
+        const remaining = endTime - Date.now();
+        if (remaining <= 0) {
+            clearInterval(timerInterval);
+            DOMElements.buttonTimer.textContent = '0.00';
+            return;
+        }
+        DOMElements.buttonTimer.textContent = (remaining / 1000).toFixed(2);
+    }, 50); // Update every 50ms for smoother millisecond display
 }
 
 // --- Image Handling & Uploads ---
@@ -359,6 +454,8 @@ function handleImageUpload(event) {
         uploadedImageData = { mimeType: file.type, data: base64String };
         DOMElements.imagePreview.src = reader.result;
         DOMElements.imagePreviewContainer.classList.remove('hidden');
+        DOMElements.ratioBtn.disabled = true;
+        DOMElements.ratioBtn.classList.add('opacity-50', 'cursor-not-allowed');
     };
     reader.readAsDataURL(file);
 }
@@ -368,6 +465,8 @@ function removeUploadedImage() {
     DOMElements.imageUploadInput.value = '';
     DOMElements.imagePreview.src = '';
     DOMElements.imagePreviewContainer.classList.add('hidden');
+    DOMElements.ratioBtn.disabled = false;
+    DOMElements.ratioBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 }
 
 // --- Preview Modal ---
@@ -407,12 +506,18 @@ function removePreviewInputImage() {
 
 function downloadPreviewImage() {
     const imageUrl = DOMElements.previewImage.src;
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = 'genart-image.png';
-    document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
+    fetch(imageUrl)
+        .then(res => res.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'genart-image.png';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(() => alert('An error occurred while downloading the image.'));
 }
-
-
