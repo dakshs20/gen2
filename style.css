@@ -132,7 +132,8 @@ header.scrolled #header-nav {
 }
 
 .use-cases-headline {
-    font-size: 2.25rem; /* text-4xl */
+    font-size: 3rem; /* text-5xl, bigger */
+    line-height: 1.2;
     font-weight: 700;
     color: #1f2937; /* gray-800 */
     margin-bottom: 2rem;
@@ -142,18 +143,19 @@ header.scrolled #header-nav {
 
 .use-cases-text-container {
     position: relative;
-    height: 6rem; /* Adjust based on largest text size to prevent layout shift */
+    height: 8rem; /* Increased height for bigger font */
     width: 100%;
 }
 
 .use-case-text {
+    font-family: 'Merriweather', serif; /* Applied new font */
     position: absolute;
     inset: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 3rem; /* text-5xl */
-    font-weight: 800;
+    font-size: 4.5rem; /* text-7xl, bigger */
+    font-weight: 900; /* Heavier weight for impact */
     color: #517CBE;
     opacity: 0; /* Initially hidden for animation */
     transform: translateY(30px);
@@ -192,9 +194,13 @@ header.scrolled #header-nav {
         font-size: 1.125rem;
     }
     .use-cases-headline {
-        font-size: 1.875rem; /* text-3xl */
+        font-size: 2.25rem; /* text-4xl, bigger on mobile */
+    }
+    .use-cases-text-container {
+        height: 6rem; /* Adjust container for mobile */
     }
     .use-case-text {
-        font-size: 2.25rem; /* text-4xl */
+        font-size: 3rem; /* text-5xl, bigger on mobile */
     }
 }
+
