@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeEventListeners();
     initializeDynamicBackground();
-    initializePricingAnimations();
+    initializePricingAnimations(); // This function has been rewritten
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
 });
 
@@ -51,34 +51,63 @@ function initializeDynamicBackground() {
     }
 }
 
+// --- REWRITTEN AND FIXED ANIMATION LOGIC ---
 function initializePricingAnimations() {
-    const masterTl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+    // Failsafe: If GSAP isn't loaded, just show the content to avoid a blank page.
+    if (typeof gsap === 'undefined') {
+        console.error("GSAP not loaded. Bypassing animations.");
+        document.querySelectorAll('.pricing-title, .pricing-subtitle, .pricing-toggle-container, .pricing-card-wrapper').forEach(el => {
+            el.style.opacity = 1;
+            el.style.transform = 'none';
+        });
+        return;
+    }
 
-    masterTl.to('.pricing-title', { opacity: 1, y: 0, duration: 1 }, 0.2)
-            .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 1 }, 0.4)
-            .to('.pricing-toggle-container', { opacity: 1, y: 0, duration: 1 }, 0.6);
+    const masterTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+
+    // 1. Animate the main page elements first with a nice stagger.
+    masterTl.to('.pricing-title, .pricing-subtitle, .pricing-toggle-container', {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.2
+    });
 
     const cards = gsap.utils.toArray('.pricing-card-wrapper');
-    masterTl.to(cards, { opacity: 1, y: 0, stagger: 0.2, duration: 1 }, 0.8);
 
-    cards.forEach((card, i) => {
-        const cardContentTl = gsap.timeline({
-            delay: 1 + i * 0.2
-        });
+    // 2. Animate the card containers into view.
+    masterTl.to(cards, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.15,
+    }, "-=0.5"); // Overlap slightly with the previous animation for a smoother flow.
+
+    // 3. Animate the content inside each card *after* the card container is visible.
+    cards.forEach((card, index) => {
+        const cardContentTl = gsap.timeline();
         
         const priceEl = card.querySelector('.plan-price-amount');
+        if (!priceEl) return; // Skip if price element doesn't exist.
+
         const price = parseFloat(priceEl.dataset.monthly);
         const priceProxy = { val: 0 };
         
-        cardContentTl.from(card.querySelectorAll('h2, .text-sm'), { opacity: 0, y: 20, stagger: 0.15, duration: 0.8 })
+        cardContentTl.from(card.querySelectorAll('h2, .text-sm, p:not(.plan-price-amount)'), { opacity: 0, y: 20, stagger: 0.1, duration: 0.6 })
                      .to(priceProxy, {
                          val: price,
-                         duration: 1.2,
-                         ease: 'power3.out',
-                         onUpdate: () => { priceEl.textContent = '$' + Math.ceil(priceProxy.val); }
+                         duration: 1,
+                         ease: 'power1.inOut',
+                         onUpdate: () => {
+                             priceEl.textContent = '$' + Math.ceil(priceProxy.val);
+                         }
                      }, "<0.2")
-                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.6 }, "<0.3")
-                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.8 }, "<0.2");
+                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
+                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
+        
+        // Add this card's content animation to the master timeline, ensuring it starts
+        // only after the card wrapper has started its animation.
+        masterTl.add(cardContentTl, 1 + index * 0.15);
     });
 }
 
