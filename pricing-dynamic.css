@@ -4,8 +4,8 @@
 /* Apply font and background to the pricing page */
 .pricing-page {
     font-family: 'Inter', sans-serif;
-    background-color: #f8fafc; /* Use a very light off-white for a softer feel */
-    overflow: hidden; /* Prevent mouse-follow blob from creating scrollbars */
+    background-color: #f8fafc;
+    overflow: hidden; 
 }
 
 /* Mouse-follow gradient effect */
@@ -16,11 +16,11 @@
     width: 100%; height: 100%;
     background: radial-gradient(
         600px circle at var(--x) var(--y),
-        rgba(79, 70, 229, 0.1), /* A soft indigo glow */
+        rgba(79, 70, 229, 0.1),
         transparent 40%
     );
     z-index: 0;
-    pointer-events: none; /* Make sure it doesn't interfere with clicks */
+    pointer-events: none;
     transition: opacity 0.3s;
 }
 
@@ -31,62 +31,62 @@
 }
 
 /* --- Entrance Animations --- */
-/* Initial hidden state for elements */
 .pricing-title, .pricing-subtitle, .pricing-card-wrapper {
     opacity: 0;
     transform: translateY(30px);
 }
 
-/* --- Card Styling & Animations --- */
+/* --- Card Styling & 3D Hover Effects --- */
 .pricing-card-wrapper {
-    perspective: 1000px; /* For 3D hover effect */
+    perspective: 1500px; /* Increased for a more subtle 3D effect */
 }
 
 .pricing-card-white {
-    background: rgba(255, 255, 255, 0.6); /* Semi-transparent white */
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 1.25rem;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    transform-style: preserve-3d; /* Crucial for child element 3D transformations */
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
     will-change: transform, box-shadow;
-    position: relative; /* for the glowing border */
-    overflow: hidden; /* Hide overflow from border animation */
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
 .pricing-card-white:hover {
-    transform: translateY(-10px) rotateX(5deg) scale(1.02);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: translateY(-12px) rotateX(7deg) scale(1.03); /* More pronounced effect */
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.2);
+}
+
+/* Add transitions to inner elements for smoothness */
+.pricing-card-white h2,
+.pricing-card-white .plan-price-amount,
+.pricing-card-white ul,
+.pricing-card-white button {
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+}
+
+/* Make inner elements react to the hover by moving forward in 3D space */
+.pricing-card-white:hover h2,
+.pricing-card-white:hover .plan-price-amount {
+    transform: translateZ(25px);
+}
+.pricing-card-white:hover ul {
+    transform: translateZ(20px);
+}
+.pricing-card-white:hover button {
+    transform: translateZ(30px) translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
 }
 
 .pricing-card-white.popular {
     border-color: rgba(79, 70, 229, 0.5);
-    transform: scale(1.05); /* Make it slightly larger by default */
-}
-
-/* Animated border for the popular card */
-.pricing-card-white.popular::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: 1.25rem; /* Match parent's border-radius */
-    padding: 2px; /* Thickness of the border */
-    background: linear-gradient(120deg, #818cf8, #4f46e5, #c084fc);
-    -webkit-mask: 
-         linear-gradient(#fff 0 0) content-box, 
-         linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-          mask-composite: exclude;
-    z-index: 0; /* Place behind content but above background */
-    animation: rotate-border 4s linear infinite;
-    background-size: 400% 400%;
-}
-
-@keyframes rotate-border {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    transform: scale(1.05);
 }
 
 .popular-badge-white {
@@ -100,31 +100,21 @@
 }
 
 .buy-now-btn-white.popular-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 7px 20px rgba(79, 70, 229, 0.6);
+    transform: translateZ(30px) translateY(-4px); /* Enhanced effect for popular button */
+    box-shadow: 0 12px 25px rgba(79, 70, 229, 0.5);
 }
 
 /* Inner card content styling */
-.plan-price-amount {
-    display: inline-block;
-}
-
-/* Animate the feature list on reveal */
-.pricing-card-white ul li {
-    opacity: 0;
-    transform: translateX(-15px);
-}
+.plan-price-amount { display: inline-block; }
+.pricing-card-white ul li { opacity: 0; transform: translateX(-15px); }
 
 .active-plan-badge {
     background: #10b981;
     color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    position: absolute;
-    top: 0;
-    left: 50%;
+    font-size: 0.75rem; font-weight: 600;
+    padding: 0.25rem 0.75rem; border-radius: 9999px;
+    position: absolute; top: 0; left: 50%;
     transform: translate(-50%, -50%);
     box-shadow: 0 2px 5px rgba(16, 185, 129, 0.4);
 }
+
