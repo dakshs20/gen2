@@ -24,69 +24,63 @@
     transition: opacity 0.3s;
 }
 
-/* Ensure content is above the background effect */
-#app-container {
-    position: relative;
-    z-index: 1;
-}
+#app-container { position: relative; z-index: 1; }
 
-/* --- Entrance Animations --- */
-.pricing-title, .pricing-subtitle, .pricing-card-wrapper {
+/* --- Initial Animation States --- */
+.pricing-title, .pricing-subtitle, .pricing-toggle-container, .pricing-card-wrapper {
     opacity: 0;
     transform: translateY(30px);
 }
 
-/* --- Card Styling & 3D Hover Effects --- */
-.pricing-card-wrapper {
-    perspective: 1500px; /* Increased for a more subtle 3D effect */
+/* --- NEW: Pricing Toggle --- */
+.pricing-toggle-container { display: inline-flex; align-items: center; gap: 1rem; }
+.pricing-toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+.pricing-toggle-switch input { opacity: 0; width: 0; height: 0; }
+.pricing-toggle-slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; border-radius: 28px; transition: .4s;
 }
+.pricing-toggle-slider:before {
+    position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px;
+    background-color: white; border-radius: 50%; transition: .4s;
+}
+input:checked + .pricing-toggle-slider { background-color: #4f46e5; }
+input:checked + .pricing-toggle-slider:before { transform: translateX(22px); }
 
+/* --- Card Styling & 3D Hover Effects --- */
+.pricing-card-wrapper { perspective: 1500px; }
 .pricing-card-white {
     background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
     border-radius: 1.25rem;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-    transform-style: preserve-3d; /* Crucial for child element 3D transformations */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    transform-style: preserve-3d;
     transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
     will-change: transform, box-shadow;
     position: relative;
     overflow: hidden;
     display: flex;
-    flex-direction: column;
 }
 
 .pricing-card-white:hover {
-    transform: translateY(-12px) rotateX(7deg) scale(1.03); /* More pronounced effect */
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.2);
-}
-
-/* Add transitions to inner elements for smoothness */
-.pricing-card-white h2,
-.pricing-card-white .plan-price-amount,
-.pricing-card-white ul,
-.pricing-card-white button {
-    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-    will-change: transform;
-}
-
-/* Make inner elements react to the hover by moving forward in 3D space */
-.pricing-card-white:hover h2,
-.pricing-card-white:hover .plan-price-amount {
-    transform: translateZ(25px);
-}
-.pricing-card-white:hover ul {
-    transform: translateZ(20px);
-}
-.pricing-card-white:hover button {
-    transform: translateZ(30px) translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    transform: translateY(-12px) rotateX(7deg) scale(1.03);
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .pricing-card-white.popular {
     border-color: rgba(79, 70, 229, 0.5);
     transform: scale(1.05);
+}
+
+/* Make inner elements react to the hover */
+.pricing-card-white:hover h2 { transform: translateZ(25px); }
+.pricing-card-white:hover .plan-price-amount { transform: translateZ(25px); }
+.pricing-card-white:hover ul { transform: translateZ(20px); }
+.pricing-card-white:hover button {
+    transform: translateZ(30px) translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
 .popular-badge-white {
@@ -100,18 +94,41 @@
 }
 
 .buy-now-btn-white.popular-btn:hover {
-    transform: translateZ(30px) translateY(-4px); /* Enhanced effect for popular button */
+    transform: translateZ(30px) translateY(-4px);
     box-shadow: 0 12px 25px rgba(79, 70, 229, 0.5);
 }
 
+/* NEW: Button Shine Effect */
+.buy-now-btn-white { position: relative; overflow: hidden; }
+.buy-now-btn-white::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 20px;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(45deg);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.buy-now-btn-white:hover::after {
+    opacity: 1;
+    animation: shine 1.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes shine {
+    to { left: 150%; }
+}
+
 /* Inner card content styling */
-.plan-price-amount { display: inline-block; }
+.plan-price-amount { display: inline-block; transition: all 0.3s ease; }
 .pricing-card-white ul li { opacity: 0; transform: translateX(-15px); }
+.feature-icon-white { transition: transform 0.3s ease; }
+.pricing-card-white ul li:hover .feature-icon-white { transform: scale(1.2); }
 
 .active-plan-badge {
     background: #10b981;
-    color: white;
-    font-size: 0.75rem; font-weight: 600;
+    color: white; font-size: 0.75rem; font-weight: 600;
     padding: 0.25rem 0.75rem; border-radius: 9999px;
     position: absolute; top: 0; left: 50%;
     transform: translate(-50%, -50%);
