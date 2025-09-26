@@ -28,67 +28,67 @@
                 <h1 class="pricing-title text-4xl sm:text-5xl font-bold text-gray-900 mb-4 tracking-tight">Flexible plans for everyone</h1>
                 <p class="pricing-subtitle text-lg md:text-xl text-gray-600 mb-12">Choose the plan that's right for you. One-time purchases, no subscriptions.</p>
 
-                <div class="grid md:grid-cols-3 gap-8 text-left">
+                <div class="grid md:grid-cols-3 gap-8">
                     <!-- Pricing Card 1: Inspire -->
                     <div class="pricing-card-wrapper">
                         <div id="plan-inspire" class="pricing-card-white">
-                             <div class="p-8 flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <div class="plan-badge-container relative h-6 mb-2"></div>
+                             <div class="card-content">
+                                <div class="card-header">
+                                    <div class="plan-badge-container"></div>
                                     <h2 class="text-2xl font-semibold text-gray-800">Inspire</h2>
                                     <p class="text-sm text-gray-500 mt-1 mb-6">Perfect for hobbyists & casual creators.</p>
                                     <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$9</p><span class="text-gray-500 font-medium">/ 575 credits</span></div>
                                     <p class="text-xs text-gray-400 font-medium mb-8">~$0.015 per generation</p>
-                                    <ul class="space-y-3 text-gray-600">
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 575 Generations</li>
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Credits expire in 3 months</span></li>
-                                    </ul>
                                 </div>
-                                <div class="pt-8"><button class="buy-now-btn-white" data-plan="inspire">Get Inspire</button></div>
+                                <ul class="space-y-3 text-gray-600">
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 575 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Credits expire in 3 months</span></li>
+                                </ul>
                             </div>
+                            <div class="card-footer"><button class="buy-now-btn-white" data-plan="inspire">Get Inspire</button></div>
                         </div>
                     </div>
 
                     <!-- Pricing Card 2: Create (Most Popular) -->
                     <div class="pricing-card-wrapper">
                         <div id="plan-create" class="pricing-card-white popular">
-                            <div class="p-8 flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <div class="plan-badge-container relative h-6 mb-2"><div class="popular-badge-white">Most Popular</div></div>
+                            <div class="card-content">
+                                <div class="card-header">
+                                    <div class="plan-badge-container"><div class="popular-badge-white">Most Popular</div></div>
                                     <h2 class="text-2xl font-semibold text-gray-800">Create</h2>
                                     <p class="text-sm text-gray-500 mt-1 mb-6">Your best balance of speed & credits.</p>
                                     <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$18</p><span class="text-gray-500 font-medium">/ 975 credits</span></div>
                                     <p class="text-xs text-gray-400 font-medium mb-8">~$0.018 per generation</p>
-                                    <ul class="space-y-3 text-gray-600">
-                                       <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 975 Generations</li>
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Credits expire in 5 months</span></li>
-                                    </ul>
                                 </div>
-                                <div class="pt-8"><button class="buy-now-btn-white popular-btn" data-plan="create">Get Create</button></div>
+                                <ul class="space-y-3 text-gray-600">
+                                   <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 975 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Credits expire in 5 months</span></li>
+                                </ul>
                             </div>
+                            <div class="card-footer"><button class="buy-now-btn-white popular-btn" data-plan="create">Get Create</button></div>
                         </div>
                     </div>
 
                     <!-- Pricing Card 3: Elevate -->
                      <div class="pricing-card-wrapper">
                         <div id="plan-elevate" class="pricing-card-white">
-                           <div class="p-8 flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <div class="plan-badge-container relative h-6 mb-2"></div>
+                           <div class="card-content">
+                                <div class="card-header">
+                                    <div class="plan-badge-container"></div>
                                     <h2 class="text-2xl font-semibold text-gray-800">Elevate</h2>
                                     <p class="text-sm text-gray-500 mt-1 mb-6">Never worry about credits again.</p>
                                     <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$29</p><span class="text-gray-500 font-medium">/ 1950 credits</span></div>
                                     <p class="text-xs text-gray-400 font-medium mb-8">~$0.014 per generation</p>
-                                    <ul class="space-y-3 text-gray-600">
-                                       <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 1950 Generations</li>
-                                        <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
-                                        <li class="flex items-center gap-3 font-semibold text-indigo-600"><svg class="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> Credits never expire</li>
-                                    </ul>
                                 </div>
-                                <div class="pt-8"><button class="buy-now-btn-white" data-plan="elevate">Get Elevate</button></div>
+                                <ul class="space-y-3 text-gray-600">
+                                   <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 1950 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3 font-semibold text-indigo-600"><svg class="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> Credits never expire</li>
+                                </ul>
                             </div>
+                            <div class="card-footer"><button class="buy-now-btn-white" data-plan="elevate">Get Elevate</button></div>
                         </div>
                     </div>
                 </div>
