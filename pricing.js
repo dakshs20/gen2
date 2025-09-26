@@ -26,8 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.buyNowBtns = document.querySelectorAll('.buy-now-btn-white');
     DOMElements.headerNav = document.getElementById('header-nav');
     DOMElements.planStatusBadge = document.getElementById('plan-status-badge');
-    DOMElements.pricingToggle = document.getElementById('pricing-toggle-checkbox');
-    DOMElements.priceAmounts = document.querySelectorAll('.plan-price-amount');
 
     initializeEventListeners();
     initializeDynamicBackground();
@@ -54,7 +52,7 @@ function initializeDynamicBackground() {
 function initializePricingAnimations() {
     if (typeof gsap === 'undefined') {
         console.error("GSAP not loaded. Bypassing animations.");
-        document.querySelectorAll('.pricing-title, .pricing-subtitle, .pricing-toggle-container, .pricing-card-wrapper').forEach(el => {
+        document.querySelectorAll('.pricing-title, .pricing-subtitle, .pricing-card-wrapper').forEach(el => {
             el.style.opacity = 1;
             el.style.transform = 'none';
         });
@@ -63,7 +61,7 @@ function initializePricingAnimations() {
 
     const masterTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
-    masterTl.to('.pricing-title, .pricing-subtitle, .pricing-toggle-container', {
+    masterTl.to('.pricing-title, .pricing-subtitle', {
         opacity: 1,
         y: 0,
         duration: 0.8,
@@ -82,48 +80,12 @@ function initializePricingAnimations() {
         const cardContentTl = gsap.timeline();
         const priceEl = card.querySelector('.plan-price-amount');
         if (!priceEl) return;
-
-        const price = parseFloat(priceEl.dataset.monthly);
-        const priceProxy = { val: 0 };
         
-        cardContentTl.from(card.querySelectorAll('h2, .text-sm, p:not(.plan-price-amount)'), { opacity: 0, y: 20, stagger: 0.1, duration: 0.6 })
-                     .to(priceProxy, {
-                         val: price,
-                         duration: 1,
-                         ease: 'power1.inOut',
-                         onUpdate: () => {
-                             priceEl.textContent = '$' + Math.ceil(priceProxy.val);
-                         }
-                     }, "<0.2")
+        cardContentTl.from(card.querySelectorAll('h2, .text-sm, p:not(.plan-price-amount), .plan-price-amount, span.font-medium'), { opacity: 0, y: 20, stagger: 0.05, duration: 0.6 })
                      .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
                      .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
         
-        masterTl.add(cardContentTl, 1 + index * 0.15);
-    });
-}
-
-function handlePriceToggle() {
-    const isYearly = DOMElements.pricingToggle.checked;
-    DOMElements.priceAmounts.forEach(el => {
-        const monthlyPrice = el.dataset.monthly;
-        const yearlyPrice = el.dataset.yearly;
-        const targetPrice = isYearly ? yearlyPrice : monthlyPrice;
-
-        const priceProxy = { val: parseFloat(el.textContent.replace('$', '')) };
-        
-        gsap.to(priceProxy, {
-            val: targetPrice,
-            duration: 0.8,
-            ease: 'power3.inOut',
-            onUpdate: () => {
-                el.textContent = '$' + Math.round(priceProxy.val);
-            }
-        });
-
-        const siblingSpan = el.nextElementSibling;
-        if(siblingSpan) {
-            siblingSpan.textContent = isYearly ? '/year' : '/month';
-        }
+        masterTl.add(cardContentTl, 0.8 + index * 0.15);
     });
 }
 
@@ -135,7 +97,6 @@ function initializeEventListeners() {
     DOMElements.buyNowBtns.forEach(btn => {
         btn.addEventListener('click', (event) => handlePurchase(event));
     });
-    DOMElements.pricingToggle?.addEventListener('change', handlePriceToggle);
 }
 
 function toggleModal(modal, show) {
@@ -181,7 +142,14 @@ function updatePlanUI(plan) {
     document.querySelectorAll('.active-plan-badge').forEach(b => b.remove());
 
     if (plan.name !== 'Free' && DOMElements.planStatusBadge) {
-        DOMElements.planStatusBadge.innerHTML = `Current Plan: <span class="font-bold">${plan.name}</span> (${plan.credits} credits remaining)`;
+        let expiryText = '';
+        if (plan.expiry !== 'never') {
+            const expiryDate = new Date(plan.expiry);
+            const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+            expiryText = daysLeft > 0 ? ` - expires in ${daysLeft} days` : ' - expired';
+        }
+        
+        DOMElements.planStatusBadge.innerHTML = `Current Plan: <span class="font-bold">${plan.name}</span> (${plan.credits} credits remaining${expiryText})`;
         
         const activePlanCard = document.getElementById(`plan-${plan.name.toLowerCase()}`);
         if (activePlanCard) {
@@ -213,7 +181,6 @@ async function handlePurchase(event) {
 
     const clickedButton = event.currentTarget;
     const plan = clickedButton.dataset.plan;
-    const isYearly = DOMElements.pricingToggle.checked;
     
     const originalButtonText = clickedButton.innerHTML;
     clickedButton.disabled = true;
@@ -227,7 +194,7 @@ async function handlePurchase(event) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ plan, isYearly })
+            body: JSON.stringify({ plan }) // No more isYearly
         });
 
         if (!response.ok) {
