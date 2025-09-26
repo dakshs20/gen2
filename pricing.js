@@ -46,31 +46,44 @@ function initializeDynamicBackground() {
 }
 
 function initializePricingAnimations() {
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    // Master timeline for a cohesive animation sequence
+    const masterTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-    tl.to('.pricing-title', { opacity: 1, y: 0, duration: 0.8 }, 0.2)
-      .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 0.8 }, 0.4);
+    // 1. Animate title and subtitle first
+    masterTl.to('.pricing-title', { opacity: 1, y: 0, duration: 0.8 }, 0.2)
+            .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 0.8 }, 0.4);
 
-    gsap.utils.toArray('.pricing-card-wrapper').forEach((card, i) => {
-        tl.to(card, { opacity: 1, y: 0, duration: 1 }, 0.6 + i * 0.2);
-        
-        const cardTl = gsap.timeline({
-            scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' }
-        });
+    const cards = gsap.utils.toArray('.pricing-card-wrapper');
+    
+    // 2. Animate the card wrappers into view with a stagger
+    masterTl.to(cards, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.2
+    }, 0.6);
 
+    // 3. Animate the inner content of each card after it appears
+    cards.forEach((card, i) => {
         const priceEl = card.querySelector('.plan-price-amount');
         const price = parseFloat(priceEl.textContent.replace('$', ''));
         const priceProxy = { val: 0 };
+
+        // This timeline animates the content inside each card
+        const cardContentTl = gsap.timeline();
         
-        cardTl.from(card.querySelectorAll('h2, .text-sm, .text-xs'), { opacity: 0, y: 15, stagger: 0.1, delay:0.2 })
-              .to(priceProxy, { 
-                    val: price,
-                    duration: 1,
-                    ease: 'power1.inOut',
-                    onUpdate: () => { priceEl.textContent = '$' + Math.ceil(priceProxy.val); }
-              }, "-=0.5")
-              .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1 }, "-=0.5")
-              .from(card.querySelector('button'), { opacity: 0, y: 15 }, "-=0.5");
+        cardContentTl.from(card.querySelectorAll('h2, .text-sm'), { opacity: 0, y: 20, stagger: 0.1, duration: 0.6 })
+                     .to(priceProxy, {
+                         val: price,
+                         duration: 1,
+                         ease: 'power2.out',
+                         onUpdate: () => { priceEl.textContent = '$' + Math.ceil(priceProxy.val); }
+                     }, "<0.2")
+                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
+                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
+
+        // Add the card's content animation to the master timeline with a delay
+        masterTl.add(cardContentTl, 1 + i * 0.2);
     });
 }
 
