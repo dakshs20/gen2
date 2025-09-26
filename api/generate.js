@@ -1,7 +1,7 @@
+import { auth } from 'firebase-admin';
 import admin from 'firebase-admin';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK (ensure it's initialized only once)
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -13,7 +13,21 @@ if (!admin.apps.length) {
     }
 }
 
-const db = getFirestore();
+const db = admin.firestore();
+
+// Function to save prompt data for analytics
+async function logGeneration(userId, prompt) {
+    try {
+        await db.collection('generations').add({
+            userId: userId,
+            prompt: prompt,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        // We log the error but don't stop the image generation process
+        console.error("Failed to log prompt:", error);
+    }
+}
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -25,30 +39,15 @@ export default async function handler(req, res) {
         if (!idToken) {
             return res.status(401).json({ error: 'User not authenticated.' });
         }
-        const user = await admin.auth().verifyIdToken(idToken);
-        const userRef = db.collection('users').doc(user.uid);
-        
+        const user = await auth().verifyIdToken(idToken);
+
         const { prompt, imageData, aspectRatio } = req.body;
         
-        // --- Credit Deduction Logic ---
-        const userDoc = await userRef.get();
-        const plan = userDoc.data()?.activePlan;
-
-        const isPaidUser = plan && plan.credits > 0 && (!plan.expiryDate || new Date() < plan.expiryDate.toDate());
-
-        if (isPaidUser) {
-            // Use an atomic decrement for paid users
-            await userRef.update({
-                'activePlan.credits': FieldValue.increment(-1)
-            });
-             console.log(`Credit deducted for paid user: ${user.uid}`);
-        } else {
-            // This is a free user (or an expired/out-of-credits paid user)
-            // The frontend enforces a 30-second delay. The backend proceeds without deduction.
-             console.log(`Free generation for user: ${user.uid}`);
+        // Log the generation attempt
+        if (prompt) {
+            await logGeneration(user.uid, prompt);
         }
-        
-        // --- Image Generation API Call ---
+
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return res.status(500).json({ error: "Server configuration error: API key not found." });
@@ -56,6 +55,10 @@ export default async function handler(req, res) {
 
         let apiUrl, payload;
 
+        // --- Intelligent Logic for Image vs. Text Generation ---
+
+        // Case 1: Image-to-Image (imageData is provided)
+        // The model will automatically use the uploaded image's aspect ratio.
         if (imageData && imageData.data) {
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
             payload = {
@@ -67,11 +70,18 @@ export default async function handler(req, res) {
                 }],
                 "generationConfig": { "responseModalities": ["IMAGE"] }
             };
-        } else {
+        } 
+        // Case 2: Text-to-Image (no imageData)
+        // We use the aspect ratio selected by the user, defaulting to '1:1'.
+        else {
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            // Validate the aspect ratio to ensure only allowed values are sent to the API.
+            const validRatios = ["1:1", "16:9", "9:16", "4:5", "128:27"];
+            const selectedRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
+
             payload = { 
                 instances: [{ prompt }], 
-                parameters: { "sampleCount": 1, "aspectRatio": aspectRatio || "1:1" }
+                parameters: { "sampleCount": 1, "aspectRatio": selectedRatio }
             };
         }
 
@@ -84,8 +94,6 @@ export default async function handler(req, res) {
         if (!apiResponse.ok) {
             const errorText = await apiResponse.text();
             console.error("Google API Error:", errorText);
-            // If API fails, we should ideally refund the credit. For simplicity, we'll log it.
-            if(isPaidUser) console.error(`CRITICAL: Generation failed for ${user.uid} but credit was deducted.`);
             return res.status(apiResponse.status).json({ error: `Google API Error: ${errorText}` });
         }
 
@@ -97,3 +105,4 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'The API function crashed.', details: error.message });
     }
 }
+
