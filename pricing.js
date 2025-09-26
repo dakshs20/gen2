@@ -20,7 +20,6 @@ const provider = new GoogleAuthProvider();
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Cache all DOM elements once to avoid repeated lookups
     DOMElements.authModal = document.getElementById('auth-modal');
     DOMElements.googleSignInBtn = document.getElementById('google-signin-btn');
     DOMElements.closeModalBtn = document.querySelector('#auth-modal .close-modal-btn');
@@ -29,37 +28,54 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.planStatusBadge = document.getElementById('plan-status-badge');
 
     initializeEventListeners();
-    initializePricingAnimations(); // Initialize new animations
+    initializeDynamicBackground(); // Initialize mouse-follow effect
+    initializePricingAnimations(); // Initialize new entrance animations
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
 });
 
-// --- NEW: ANIMATION LOGIC ---
-function initializePricingAnimations() {
-    gsap.to('.pricing-page h1', { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out', delay: 0.2 });
-    gsap.to('.pricing-page p', { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out', delay: 0.4 });
-    
-    const cards = gsap.utils.toArray('.pricing-card-white');
-    cards.forEach((card, i) => {
-        gsap.to(card, {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: 'power2.out',
-            delay: 0.6 + i * 0.2, // Staggered delay for each card
-            onComplete: () => {
-                // Animate features inside the card after the card has appeared
-                const features = card.querySelectorAll('ul li');
-                gsap.to(features, {
-                    opacity: 1,
-                    x: 0,
-                    duration: 0.5,
-                    stagger: 0.1,
-                    ease: 'power2.out'
-                });
-            }
+// --- DYNAMIC UI & ANIMATIONS ---
+
+function initializeDynamicBackground() {
+    const pricingPage = document.querySelector('.pricing-page');
+    if (pricingPage) {
+        window.addEventListener('mousemove', e => {
+            pricingPage.style.setProperty('--x', e.clientX + 'px');
+            pricingPage.style.setProperty('--y', e.clientY + 'px');
         });
+    }
+}
+
+function initializePricingAnimations() {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+    tl.to('.pricing-title', { opacity: 1, y: 0, duration: 0.8 }, 0.2)
+      .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 0.8 }, 0.4);
+
+    gsap.utils.toArray('.pricing-card-wrapper').forEach((card, i) => {
+        tl.to(card, { opacity: 1, y: 0, duration: 1 }, 0.6 + i * 0.2);
+        
+        const cardTl = gsap.timeline({
+            scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' }
+        });
+
+        const priceEl = card.querySelector('.plan-price-amount');
+        const price = parseFloat(priceEl.textContent.replace('$', ''));
+        const priceProxy = { val: 0 };
+        
+        cardTl.from(card.querySelectorAll('h2, .text-sm, .text-xs'), { opacity: 0, y: 15, stagger: 0.1, delay:0.2 })
+              .to(priceProxy, { 
+                    val: price,
+                    duration: 1,
+                    ease: 'power1.inOut',
+                    onUpdate: () => { priceEl.textContent = '$' + Math.ceil(priceProxy.val); }
+              }, "-=0.5")
+              .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1 }, "-=0.5")
+              .from(card.querySelector('button'), { opacity: 0, y: 15 }, "-=0.5");
     });
 }
+
+
+// --- CORE LOGIC ---
 
 function initializeEventListeners() {
     DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
@@ -69,7 +85,6 @@ function initializeEventListeners() {
     });
 }
 
-// --- Core Logic ---
 function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
@@ -92,15 +107,12 @@ async function updateUIForAuthState(user) {
         try {
             const token = await user.getIdToken();
             const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (response.ok) {
-                const plan = await response.json();
-                updatePlanUI(plan);
-            } else {
-                throw new Error("Failed to fetch plan details");
-            }
+            if (!response.ok) throw new Error("Failed to fetch plan details");
+            const plan = await response.json();
+            updatePlanUI(plan);
         } catch (error) {
             console.error("Error fetching plan:", error);
-            DOMElements.planStatusBadge.textContent = 'Could not load plan.';
+            if(DOMElements.planStatusBadge) DOMElements.planStatusBadge.textContent = 'Could not load plan.';
         }
     } else {
          DOMElements.headerNav.innerHTML = `
@@ -108,12 +120,11 @@ async function updateUIForAuthState(user) {
             <button id="sign-in-btn" class="text-sm font-medium text-white bg-[#517CBE] hover:bg-[#43649d] px-4 py-1.5 rounded-full transition-colors">Sign In</button>
         `;
         document.getElementById('sign-in-btn').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
-        updatePlanUI({ name: 'Free', credits: 0 }); // Show default free status
+        updatePlanUI({ name: 'Free', credits: 10 });
     }
 }
 
 function updatePlanUI(plan) {
-    // Hide all active badges first
     document.querySelectorAll('.active-plan-badge').forEach(b => b.remove());
 
     if (plan.name !== 'Free') {
@@ -122,14 +133,16 @@ function updatePlanUI(plan) {
         const activePlanCard = document.getElementById(`plan-${plan.name.toLowerCase()}`);
         if (activePlanCard) {
             const badgeContainer = activePlanCard.querySelector('.plan-badge-container');
-            const badge = document.createElement('div');
-            badge.className = 'active-plan-badge';
-            badge.textContent = 'Active Plan';
-            badgeContainer.innerHTML = ''; // Clear existing badges like "Most Popular"
-            badgeContainer.appendChild(badge);
+            if (badgeContainer) {
+                 const badge = document.createElement('div');
+                badge.className = 'active-plan-badge';
+                badge.textContent = 'Active Plan';
+                badgeContainer.innerHTML = ''; 
+                badgeContainer.appendChild(badge);
+            }
         }
     } else {
-        DOMElements.planStatusBadge.textContent = 'You are on the Free Plan';
+        DOMElements.planStatusBadge.innerHTML = `You are on the <span class="font-bold">Free Plan</span> with ${plan.credits} credits.`;
     }
 }
 
