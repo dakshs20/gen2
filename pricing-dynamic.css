@@ -34,8 +34,7 @@
 
 /* --- Card Styling & 3D Hover Effects --- */
 .grid {
-    /* Ensures cards in the same row stretch to the same height */
-    align-items: stretch; 
+    align-items: stretch; /* Ensures cards in the same row stretch to the same height */
 }
 
 .pricing-card-wrapper { 
@@ -55,6 +54,7 @@
     position: relative;
     overflow: hidden;
     width: 100%;
+    padding: 2rem;
     /* --- CRITICAL ALIGNMENT STRUCTURE --- */
     display: flex;
     flex-direction: column;
@@ -76,22 +76,16 @@
 }
 
 /* --- Card Content Alignment --- */
-/* This is the main padding and content area */
-.pricing-card-white .p-8 {
+.card-content {
     flex-grow: 1; /* This is the key: it makes this area take all available vertical space */
-    display: flex;
-    flex-direction: column;
 }
-
-/* This div holds the button and stays at the bottom */
-.pricing-card-white .pt-8 {
+.card-footer {
     margin-top: auto; /* Pushes this element to the bottom of the flex container */
     padding-top: 2rem;
 }
-
-/* A container for the top content to ensure it stays together */
-.pricing-card-white .flex-grow {
-    flex-grow: 1;
+.plan-badge-container {
+    height: 1.5rem; /* Reserve space for badge */
+    margin-bottom: 0.5rem;
 }
 
 .popular-badge-white {
@@ -157,9 +151,7 @@
     background: #10b981;
     color: white; font-size: 0.75rem; font-weight: 600;
     padding: 0.25rem 0.75rem; border-radius: 9999px;
-    position: absolute; top: 0; left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 2px 5px rgba(16, 185, 129, 0.4);
+    /* Positioned via badge-container now, no need for absolute */
 }
 
 /* Polished Modal Styles */
