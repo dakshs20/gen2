@@ -33,10 +33,16 @@
 }
 
 /* --- Card Styling & 3D Hover Effects --- */
-.pricing-card-wrapper { 
-    perspective: 1500px; 
-    height: 100%;
+.grid {
+    /* Ensures cards in the same row stretch to the same height */
+    align-items: stretch; 
 }
+
+.pricing-card-wrapper { 
+    perspective: 1500px;
+    display: flex; /* Allows the card inside to have 100% height */
+}
+
 .pricing-card-white {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -48,8 +54,10 @@
     will-change: transform, box-shadow;
     position: relative;
     overflow: hidden;
-    height: 100%;
-    display: flex; /* Make the card itself a flex container */
+    width: 100%;
+    /* --- CRITICAL ALIGNMENT STRUCTURE --- */
+    display: flex;
+    flex-direction: column;
 }
 
 .pricing-card-white:hover {
@@ -62,36 +70,28 @@
     border-color: rgba(79, 70, 229, 0.5);
     transform: scale(1.05);
 }
+
 .pricing-card-white.popular:hover {
     transform: translateY(-12px) rotateX(7deg) scale(1.08);
 }
 
-
-/* --- ALIGNMENT FIX & STRUCTURE --- */
-/* This is the main padding and flex container INSIDE the card */
-.pricing-card-white > .p-8 {
+/* --- Card Content Alignment --- */
+/* This is the main padding and content area */
+.pricing-card-white .p-8 {
+    flex-grow: 1; /* This is the key: it makes this area take all available vertical space */
     display: flex;
     flex-direction: column;
-    height: 100%;
-    width: 100%;
 }
-/* This div holds the text content and grows to push the button down */
+
+/* This div holds the button and stays at the bottom */
+.pricing-card-white .pt-8 {
+    margin-top: auto; /* Pushes this element to the bottom of the flex container */
+    padding-top: 2rem;
+}
+
+/* A container for the top content to ensure it stays together */
 .pricing-card-white .flex-grow {
     flex-grow: 1;
-}
-/* This div holds the button and is pushed to the bottom */
-.pricing-card-white .pt-8 {
-    padding-top: 2rem;
-    margin-top: auto; /* CRITICAL FIX: Pushes this element to the bottom */
-}
-
-
-/* Make inner elements react to the hover */
-.pricing-card-white:hover h2,
-.pricing-card-white:hover .plan-price-amount,
-.pricing-card-white:hover ul,
-.pricing-card-white:hover button {
-    transform: translateZ(20px);
 }
 
 .popular-badge-white {
@@ -116,6 +116,7 @@
 
 .buy-now-btn-white:hover {
     background-color: #000;
+    transform: translateY(-2px); /* Subtle lift on hover */
 }
 
 .buy-now-btn-white.popular-btn {
@@ -166,10 +167,10 @@
     position: fixed; inset: 0;
     background-color: rgba(17, 24, 39, 0.6);
     backdrop-filter: blur(4px);
-    z-index: 50; display: flex; align-items: center; justify-content: center;
-    padding: 1rem; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+    z-index: 50; display: none; align-items: center; justify-content: center;
+    padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
 }
-.modal-backdrop[aria-hidden="false"] { opacity: 1; pointer-events: auto; }
+.modal-backdrop[aria-hidden="false"] { display: flex; opacity: 1; }
 
 .modal-content {
     background-color: white; border-radius: 1rem;
