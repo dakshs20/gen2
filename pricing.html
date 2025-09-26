@@ -8,9 +8,11 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="pricing-dynamic.css"> <!-- LINKING THE NEW DYNAMIC STYLES -->
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body class="pricing-page">
-    <!-- Main App Container -->
     <div id="app-container" class="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-screen">
         
         <header class="relative flex justify-between items-center py-5 px-2 z-20">
@@ -18,54 +20,71 @@
                  <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-6 w-auto">
             </a>
             <div id="header-nav" class="hidden md:flex items-center space-x-2 bg-white/70 backdrop-blur-md border border-slate-200/80 shadow-sm rounded-full px-2 py-1">
-                <!-- Auth state content injected by pricing.js -->
             </div>
         </header>
 
         <main class="flex-grow flex flex-col items-center justify-center text-center p-4">
             <div class="w-full max-w-5xl">
                 <div id="plan-status-badge" class="plan-status-badge"></div>
-                <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 tracking-tight">Choose Your Plan</h1>
-                <p class="text-lg md:text-xl text-gray-500 mb-12">Purchase credits to continue creating with the most advanced AI.</p>
+                <h1 class="pricing-title text-4xl sm:text-5xl font-bold text-gray-900 mb-4 tracking-tight">Choose Your Plan</h1>
+                <p class="pricing-subtitle text-lg md:text-xl text-gray-500 mb-12">Purchase credits to continue creating with the most advanced AI.</p>
                 
                 <div class="grid md:grid-cols-3 gap-8 text-left">
                     <!-- Pricing Card 1: Inspire -->
-                    <div id="plan-inspire" class="pricing-card-white">
-                         <div class="p-8 flex-grow">
-                             <div class="plan-badge-container"></div>
-                            <h2 class="text-2xl font-semibold text-gray-800">Inspire</h2>
-                            <p class="text-sm text-gray-500 mt-1 mb-6">Perfect for hobbyists & casual creators.</p>
-                            <div class="flex items-baseline gap-2 mb-1"><p class="text-4xl font-bold text-gray-900">$9</p><p class="text-xl font-medium text-gray-400">/ ₹798</p></div>
-                             <p class="text-xs text-gray-400 font-medium mb-8">~$0.015 per generation</p>
-                            <ul class="space-y-3 text-gray-600"><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 575 Generations</li><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Expires in 3 months</span></li></ul>
+                    <div class="pricing-card-wrapper">
+                        <div id="plan-inspire" class="pricing-card-white">
+                            <div class="p-8 flex-grow">
+                                <div class="plan-badge-container relative h-6 mb-2"></div>
+                                <h2 class="text-2xl font-semibold text-gray-800">Inspire</h2>
+                                <p class="text-sm text-gray-500 mt-1 mb-6">Perfect for hobbyists & casual creators.</p>
+                                <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$9</p><p class="text-xl font-medium text-gray-400">/ ₹798</p></div>
+                                <p class="text-xs text-gray-400 font-medium mb-8">~$0.015 per generation</p>
+                                <ul class="space-y-3 text-gray-600">
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 575 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Expires in 3 months</span></li>
+                                </ul>
+                            </div>
+                            <div class="p-8 pt-0"><button class="buy-now-btn-white" data-plan="inspire">Get Inspire</button></div>
                         </div>
-                        <div class="p-8 pt-0"><button class="buy-now-btn-white" data-plan="inspire">Get Inspire</button></div>
                     </div>
 
                     <!-- Pricing Card 2: Create (Most Popular) -->
-                    <div id="plan-create" class="pricing-card-white popular">
-                         <div class="p-8 flex-grow">
-                            <div class="plan-badge-container"><div class="popular-badge-white">Most Popular</div></div>
-                            <h2 class="text-2xl font-semibold text-gray-800">Create</h2>
-                            <p class="text-sm text-gray-500 mt-1 mb-6">Your best balance of speed & credits.</p>
-                            <div class="flex items-baseline gap-2 mb-1"><p class="text-4xl font-bold text-gray-900">$18</p><p class="text-xl font-medium text-gray-400">/ ₹1596</p></div>
-                             <p class="text-xs text-gray-400 font-medium mb-8">~$0.018 per generation</p>
-                            <ul class="space-y-3 text-gray-600"><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 975 Generations</li><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Expires in 5 months</span></li></ul>
+                    <div class="pricing-card-wrapper">
+                        <div id="plan-create" class="pricing-card-white popular">
+                            <div class="p-8 flex-grow">
+                                <div class="plan-badge-container relative h-6 mb-2"><div class="popular-badge-white">Most Popular</div></div>
+                                <h2 class="text-2xl font-semibold text-gray-800">Create</h2>
+                                <p class="text-sm text-gray-500 mt-1 mb-6">Your best balance of speed & credits.</p>
+                                <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$18</p><p class="text-xl font-medium text-gray-400">/ ₹1596</p></div>
+                                <p class="text-xs text-gray-400 font-medium mb-8">~$0.018 per generation</p>
+                                <ul class="space-y-3 text-gray-600">
+                                   <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 975 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="expiry-info">Expires in 5 months</span></li>
+                                </ul>
+                            </div>
+                            <div class="p-8 pt-0"><button class="buy-now-btn-white popular-btn" data-plan="create">Get Create</button></div>
                         </div>
-                        <div class="p-8 pt-0"><button class="buy-now-btn-white popular-btn" data-plan="create">Get Create</button></div>
                     </div>
 
                     <!-- Pricing Card 3: Elevate -->
-                     <div id="plan-elevate" class="pricing-card-white">
-                         <div class="p-8 flex-grow">
-                            <div class="plan-badge-container"></div>
-                             <h2 class="text-2xl font-semibold text-gray-800">Elevate</h2>
-                            <p class="text-sm text-gray-500 mt-1 mb-6">Never worry about credits again.</p>
-                            <div class="flex items-baseline gap-2 mb-1"><p class="text-4xl font-bold text-gray-900">$29</p><p class="text-xl font-medium text-gray-400">/ ₹2571</p></div>
-                             <p class="text-xs text-gray-400 font-medium mb-8">~$0.014 per generation</p>
-                            <ul class="space-y-3 text-gray-600"><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 1950 Generations</li><li class="flex items-center gap-3"><svg class="feature-icon-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li><li class="flex items-center gap-3 font-semibold text-amber-500"><svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> Never Expires</li></ul>
+                     <div class="pricing-card-wrapper">
+                        <div id="plan-elevate" class="pricing-card-white">
+                            <div class="p-8 flex-grow">
+                                <div class="plan-badge-container relative h-6 mb-2"></div>
+                                <h2 class="text-2xl font-semibold text-gray-800">Elevate</h2>
+                                <p class="text-sm text-gray-500 mt-1 mb-6">Never worry about credits again.</p>
+                                <div class="flex items-baseline gap-2 mb-1"><p class="plan-price-amount text-4xl font-bold text-gray-900">$29</p><p class="text-xl font-medium text-gray-400">/ ₹2571</p></div>
+                                <p class="text-xs text-gray-400 font-medium mb-8">~$0.014 per generation</p>
+                                <ul class="space-y-3 text-gray-600">
+                                   <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 1950 Generations</li>
+                                    <li class="flex items-center gap-3"><svg class="feature-icon-white w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> <span class="speed-info">Under 17 seconds</span></li>
+                                    <li class="flex items-center gap-3 font-semibold text-amber-500"><svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> Never Expires</li>
+                                </ul>
+                            </div>
+                            <div class="p-8 pt-0"><button class="buy-now-btn-white" data-plan="elevate">Get Elevate</button></div>
                         </div>
-                         <div class="p-8 pt-0"><button class="buy-now-btn-white" data-plan="elevate">Get Elevate</button></div>
                     </div>
                 </div>
             </div>
