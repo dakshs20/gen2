@@ -20,7 +20,7 @@ const provider = new GoogleAuthProvider();
 
 // --- Global State ---
 let currentUser;
-let currentUserCredits = 0;
+let currentUserPlan = { name: 'Free', credits: 0, expiryDate: null };
 let isGenerating = false;
 let currentAspectRatio = '1:1';
 let uploadedImageData = null;
@@ -33,7 +33,7 @@ const DOMElements = {};
 document.addEventListener('DOMContentLoaded', () => {
     const ids = [
         'header-nav', 'gallery-container', 'masonry-gallery', 'prompt-input',
-        'generate-btn', 'generate-icon', 'loading-spinner', 'ratio-btn', 'ratio-options',
+        'generate-btn', 'generate-icon', 'ratio-btn', 'ratio-options',
         'auth-modal', 'google-signin-btn', 'out-of-credits-modal', 
         'preview-modal', 'preview-image', 'preview-prompt-input',
         'download-btn', 'close-preview-btn', 'regenerate-btn',
@@ -57,23 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     initializeAnimations();
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
-    restructureGalleryForMobile();
 });
 
-function restructureGalleryForMobile() {
-    if (window.innerWidth >= 768) return;
-    const firstColumn = DOMElements.masonryColumns[0];
-    if (!firstColumn) return;
-    for (let i = 1; i < DOMElements.masonryColumns.length; i++) {
-        const column = DOMElements.masonryColumns[i];
-        while (column.firstChild) {
-            firstColumn.appendChild(column.firstChild);
-        }
-    }
-}
-
 function initializeEventListeners() {
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+    DOMElements.googleSignInBtn?.addEventListener('click', () => signInWithPopup(auth, provider));
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     
@@ -92,9 +79,7 @@ function initializeEventListeners() {
 
     DOMElements.ratioBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!DOMElements.ratioBtn.disabled) {
-            DOMElements.ratioOptions.classList.toggle('hidden');
-        }
+        if (!DOMElements.ratioBtn.disabled) DOMElements.ratioOptions.classList.toggle('hidden');
     });
     document.addEventListener('click', () => DOMElements.ratioOptions?.classList.add('hidden'));
     DOMElements.ratioOptionBtns.forEach(btn => {
@@ -120,32 +105,16 @@ function initializeEventListeners() {
 
     window.addEventListener('scroll', () => {
         const header = document.querySelector('header');
-        if (window.scrollY > 10) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
+        if (window.scrollY > 10) header.classList.add('scrolled');
+        else header.classList.remove('scrolled');
     });
 }
 
-// --- Animations ---
 function initializeAnimations() {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-    
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     gsap.registerPlugin(ScrollTrigger, TextPlugin);
-
-    // Simple fade-in for hero headline
-    gsap.fromTo(DOMElements.heroHeadline, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 }
-    );
-
-    gsap.fromTo(DOMElements.heroSubline, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 }
-    );
-
+    gsap.fromTo(DOMElements.heroHeadline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 });
+    gsap.fromTo(DOMElements.heroSubline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 });
     const words = ["creators.", "agencies.", "enterprises."];
     let masterTl = gsap.timeline({ repeat: -1 });
     words.forEach(word => {
@@ -153,95 +122,8 @@ function initializeAnimations() {
         tl.to("#typewriter", { text: word, duration: 1, ease: "none" });
         masterTl.add(tl);
     });
-    
-    if (DOMElements.statCards.length > 0) {
-        gsap.fromTo(DOMElements.statCards, 
-            { opacity: 0, y: 30, scale: 0.95 },
-            { 
-                opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out',
-                scrollTrigger: {
-                    trigger: "#stats-section",
-                    start: "top 85%",
-                }
-            }
-        );
-    }
-
-    if (DOMElements.counters.length > 0) {
-        DOMElements.counters.forEach(counter => {
-            const target = +counter.dataset.target;
-            const proxy = { val: 0 }; 
-
-            gsap.to(proxy, {
-                val: target,
-                duration: 2.5,
-                ease: "power2.out",
-                scrollTrigger: {
-                    trigger: counter,
-                    start: "top 90%",
-                },
-                onUpdate: function() {
-                    counter.textContent = Math.ceil(proxy.val);
-                }
-            });
-        });
-    }
-
-    // Testimonial Animation
-    const testimonialSection = document.getElementById('testimonial-section');
-    if(testimonialSection) {
-        gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), {
-            opacity: 0,
-            y: 50,
-            duration: 1,
-            stagger: 0.2,
-            ease: 'power3.out',
-            scrollTrigger: {
-                trigger: testimonialSection,
-                start: "top 80%",
-            }
-        });
-    }
-
-    // Dynamic Use Cases Scroll Animation
-    const useCasesSection = document.getElementById('use-cases-section');
-    if (useCasesSection) {
-        const useCasesHeadline = useCasesSection.querySelector(".use-cases-headline");
-        const useCaseTexts = gsap.utils.toArray('.use-case-text');
-        
-        if (useCasesHeadline && useCaseTexts.length > 0) {
-            const tl = gsap.timeline();
-            
-            // Animate the headline and the first text item to appear
-            tl.to(useCasesHeadline, { opacity: 1, y: 0, duration: 0.3 });
-            tl.to(useCaseTexts[0], { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
-
-            // Loop through the rest of the text items to create sequential transitions
-            for (let i = 1; i < useCaseTexts.length; i++) {
-                // Animate out the previous text item and wait a moment before the next one
-                tl.to(useCaseTexts[i-1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.7");
-                // Animate in the current text item
-                tl.to(useCaseTexts[i], { opacity: 1, y: 0, duration: 0.3 });
-            }
-            
-            // Animate out the final text item and the headline
-            tl.to(useCaseTexts[useCaseTexts.length - 1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.7");
-            tl.to(useCasesHeadline, { opacity: 0, y: -30, duration: 0.3 }, "<"); // Animate out headline with the last text
-
-            ScrollTrigger.create({
-                trigger: useCasesSection,
-                start: "top top",
-                end: "+=250%", // Provides ample scroll distance for the animation to play out smoothly
-                pin: useCasesSection, // Pin the entire section
-                scrub: 0.8, // Smoothes the animation's link to the scrollbar
-                animation: tl,
-            });
-        }
-    }
 }
 
-
-// --- Core App Logic ---
 function updateUIForAuthState(user) {
     currentUser = user;
     const nav = DOMElements.headerNav;
@@ -250,17 +132,17 @@ function updateUIForAuthState(user) {
     if (user) {
         nav.innerHTML = `
             <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
-            <div id="credits-counter" class="text-sm font-medium text-gray-700 px-3 py-1">Credits: ...</div>
+            <div id="plan-badge-header" class="text-sm font-medium text-gray-700 px-3 py-1">Plan: ...</div>
             <button id="sign-out-btn-desktop" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Sign Out</button>
         `;
         mobileNav.innerHTML = `
             <a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a>
-            <div id="credits-counter-mobile" class="text-center text-lg font-semibold text-gray-700 p-3 my-2 border-y">Credits: ...</div>
+            <div id="plan-badge-mobile" class="text-center text-lg font-semibold text-gray-700 p-3 my-2 border-y">Plan: ...</div>
             <button id="sign-out-btn-mobile" class="w-full text-left text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Sign Out</button>
         `;
         document.getElementById('sign-out-btn-desktop').addEventListener('click', () => signOut(auth));
         document.getElementById('sign-out-btn-mobile').addEventListener('click', () => signOut(auth));
-        fetchUserCredits(user);
+        fetchUserPlan(user);
     } else {
         nav.innerHTML = `
             <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
@@ -272,48 +154,45 @@ function updateUIForAuthState(user) {
                  <button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button>
             </div>
         `;
-        document.getElementById('sign-in-btn-desktop').addEventListener('click', signInWithGoogle);
-        document.getElementById('sign-in-btn-mobile').addEventListener('click', signInWithGoogle);
+        document.getElementById('sign-in-btn-desktop').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
+        document.getElementById('sign-in-btn-mobile').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
+        currentUserPlan = { name: 'Free', credits: 0, expiryDate: null };
+        updatePlanDisplay(currentUserPlan);
     }
 }
 
-async function fetchUserCredits(user) {
+async function fetchUserPlan(user) {
     try {
         const token = await user.getIdToken(true);
         const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!response.ok) throw new Error('Failed to fetch credits');
-        const data = await response.json();
-        currentUserCredits = data.credits;
-        updateCreditsDisplay(currentUserCredits);
+        if (!response.ok) throw new Error('Failed to fetch plan');
+        currentUserPlan = await response.json();
+        updatePlanDisplay(currentUserPlan);
     } catch (error) {
-        console.error("Error fetching credits:", error);
-        updateCreditsDisplay('Error');
+        console.error("Error fetching plan:", error);
+        currentUserPlan = { name: 'Free', credits: 0, expiryDate: null };
+        updatePlanDisplay(currentUserPlan);
     }
 }
 
-function updateCreditsDisplay(amount) {
-    const creditsCounter = document.getElementById('credits-counter');
-    const creditsCounterMobile = document.getElementById('credits-counter-mobile');
-    if (creditsCounter) creditsCounter.textContent = `Credits: ${amount}`;
-    if (creditsCounterMobile) creditsCounterMobile.textContent = `Credits: ${amount}`;
+function updatePlanDisplay(plan) {
+    const planBadgeHeader = document.getElementById('plan-badge-header');
+    const planBadgeMobile = document.getElementById('plan-badge-mobile');
+    let displayText;
+    if (plan.name === 'Free') {
+        displayText = 'Plan: Free';
+    } else {
+        displayText = `Plan: ${plan.name} (${plan.credits} credits)`;
+    }
+    if (planBadgeHeader) planBadgeHeader.textContent = displayText;
+    if (planBadgeMobile) planBadgeMobile.textContent = displayText;
 }
 
 function autoResizeTextarea(e) {
     const textarea = e.target;
-    const promptBarContainer = DOMElements.promptBarContainer;
-    if (!textarea || !promptBarContainer) return;
-
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
-
-    const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
-    const numLines = Math.round(textarea.scrollHeight / lineHeight);
-
-    if (numLines > 1) { 
-        promptBarContainer.classList.add('expanded');
-    } else {
-        promptBarContainer.classList.remove('expanded');
-    }
+    DOMElements.promptBarContainer.classList.toggle('expanded', textarea.scrollHeight > 50);
 }
 
 function toggleModal(modal, show) {
@@ -331,18 +210,17 @@ function closeAllModals() {
     document.querySelectorAll('[role="dialog"]').forEach(modal => toggleModal(modal, false));
 }
 
-function signInWithGoogle() {
-    signInWithPopup(auth, provider).catch(console.error);
-}
-
 // --- Image Generation ---
-async function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
+function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
     if (isGenerating) return;
     if (!currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
-    if (currentUserCredits <= 0) {
+
+    const isFree = currentUserPlan.name === 'Free';
+    
+    if (!isFree && currentUserPlan.credits <= 0) {
         toggleModal(DOMElements.outOfCreditsModal, true);
         return;
     }
@@ -351,66 +229,67 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
     const prompt = fromRegenerate ? promptOverride : DOMElements.promptInput.value.trim();
 
     if (!prompt && !imageDataSource) {
-        const promptBar = DOMElements.promptInput.parentElement;
-        promptBar.classList.add('animate-shake');
-        setTimeout(() => promptBar.classList.remove('animate-shake'), 500);
+        DOMElements.promptBarContainer.classList.add('animate-shake');
+        setTimeout(() => DOMElements.promptBarContainer.classList.remove('animate-shake'), 820);
         return;
     }
-
-    isGenerating = true;
-    setLoadingState(true);
-    startTimer();
     
-    const aspectRatioToSend = imageDataSource ? null : currentAspectRatio;
-    const generationInputData = imageDataSource ? {...imageDataSource} : null;
+    setLoadingState(true, isFree);
 
-    try {
-        const token = await currentUser.getIdToken();
-        
-        const deductResponse = await fetch('/api/credits', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!deductResponse.ok) throw new Error('Credit deduction failed. Please try again.');
-        
-        const creditData = await deductResponse.json();
-        currentUserCredits = creditData.newCredits;
-        updateCreditsDisplay(currentUserCredits);
-
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, imageData: generationInputData, aspectRatio: aspectRatioToSend })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API generation failed: ${errorText}`);
-        }
-        
-        const result = await response.json();
-        const base64Data = generationInputData
-            ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data 
-            : result.predictions?.[0]?.bytesBase64Encoded;
+    const performGeneration = async () => {
+        try {
+            const token = await currentUser.getIdToken();
+            const aspectRatioToSend = imageDataSource ? null : currentAspectRatio;
             
-        if (!base64Data) throw new Error("No image data in API response");
-        
-        const imageUrl = `data:image/png;base64,${base64Data}`;
-        
-        showPreviewModal(imageUrl, prompt, generationInputData);
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ prompt, imageData: imageDataSource, aspectRatio: aspectRatioToSend })
+            });
 
-    } catch (error) {
-        console.error("Generation Error:", error);
-        alert(`An error occurred during generation: ${error.message}`);
-    } finally {
-        clearInterval(timerInterval);
-        setLoadingState(false);
-        if(!fromRegenerate) {
-            DOMElements.promptInput.value = '';
-            autoResizeTextarea({target: DOMElements.promptInput});
-            removeUploadedImage();
+            if (response.status === 402) { // Insufficient credits from backend
+                 toggleModal(DOMElements.outOfCreditsModal, true);
+                 throw new Error('Insufficient credits.');
+            }
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API generation failed: ${errorText}`);
+            }
+            
+            if (!isFree) {
+                currentUserPlan.credits--;
+                updatePlanDisplay(currentUserPlan);
+            }
+            
+            const result = await response.json();
+            const base64Data = imageDataSource
+                ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data 
+                : result.predictions?.[0]?.bytesBase64Encoded;
+                
+            if (!base64Data) throw new Error("No image data in API response");
+            
+            showPreviewModal(`data:image/png;base64,${base64Data}`, prompt, imageDataSource);
+
+        } catch (error) {
+            console.error("Generation Error:", error);
+            if (error.message !== 'Insufficient credits.') {
+                alert(`An error occurred during generation: ${error.message}`);
+            }
+        } finally {
+            clearInterval(timerInterval);
+            setLoadingState(false, isFree);
+            if(!fromRegenerate) {
+                DOMElements.promptInput.value = '';
+                autoResizeTextarea({target: DOMElements.promptInput});
+                removeUploadedImage();
+            }
         }
+    };
+
+    if (isFree) {
+        setTimeout(performGeneration, 30000);
+    } else {
+        performGeneration();
     }
 }
 
@@ -422,16 +301,17 @@ async function handleRegeneration() {
     await handleImageGenerationRequest(newPrompt, true);
 }
 
-function setLoadingState(isLoading) {
+function setLoadingState(isLoading, isFree) {
     isGenerating = isLoading;
     DOMElements.generateBtn.disabled = isLoading;
     DOMElements.buttonContent.classList.toggle('hidden', isLoading);
     DOMElements.buttonTimer.classList.toggle('hidden', !isLoading);
+    if(isLoading) startTimer(isFree ? 30000 : 17000);
 }
 
-function startTimer() {
-    let endTime = Date.now() + 17000;
-    DOMElements.buttonTimer.textContent = '17.00';
+function startTimer(duration) {
+    let endTime = Date.now() + duration;
+    DOMElements.buttonTimer.textContent = (duration / 1000).toFixed(2);
     
     timerInterval = setInterval(() => {
         const remaining = endTime - Date.now();
@@ -441,7 +321,7 @@ function startTimer() {
             return;
         }
         DOMElements.buttonTimer.textContent = (remaining / 1000).toFixed(2);
-    }, 50); // Update every 50ms for smoother millisecond display
+    }, 50);
 }
 
 // --- Image Handling & Uploads ---
@@ -450,12 +330,10 @@ function handleImageUpload(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-        const base64String = reader.result.split(',')[1];
-        uploadedImageData = { mimeType: file.type, data: base64String };
+        uploadedImageData = { mimeType: file.type, data: reader.result.split(',')[1] };
         DOMElements.imagePreview.src = reader.result;
         DOMElements.imagePreviewContainer.classList.remove('hidden');
         DOMElements.ratioBtn.disabled = true;
-        DOMElements.ratioBtn.classList.add('opacity-50', 'cursor-not-allowed');
     };
     reader.readAsDataURL(file);
 }
@@ -466,7 +344,6 @@ function removeUploadedImage() {
     DOMElements.imagePreview.src = '';
     DOMElements.imagePreviewContainer.classList.add('hidden');
     DOMElements.ratioBtn.disabled = false;
-    DOMElements.ratioBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 }
 
 // --- Preview Modal ---
@@ -476,8 +353,7 @@ function showPreviewModal(imageUrl, prompt, inputImageData) {
     currentPreviewInputData = inputImageData;
 
     if (inputImageData) {
-        const dataUrl = `data:${inputImageData.mimeType};base64,${inputImageData.data}`;
-        DOMElements.previewInputImage.src = dataUrl;
+        DOMElements.previewInputImage.src = `data:${inputImageData.mimeType};base64,${inputImageData.data}`;
         DOMElements.previewInputImageContainer.classList.remove('hidden');
     } else {
         DOMElements.previewInputImageContainer.classList.add('hidden');
@@ -490,8 +366,7 @@ function handlePreviewImageChange(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-        const base64String = reader.result.split(',')[1];
-        currentPreviewInputData = { mimeType: file.type, data: base64String };
+        currentPreviewInputData = { mimeType: file.type, data: reader.result.split(',')[1] };
         DOMElements.previewInputImage.src = reader.result;
     };
     reader.readAsDataURL(file);
@@ -499,25 +374,13 @@ function handlePreviewImageChange(event) {
 
 function removePreviewInputImage() {
     currentPreviewInputData = null;
-    DOMElements.previewImageUploadInput.value = '';
     DOMElements.previewInputImage.src = '';
     DOMElements.previewInputImageContainer.classList.add('hidden');
 }
 
 function downloadPreviewImage() {
-    const imageUrl = DOMElements.previewImage.src;
-    fetch(imageUrl)
-        .then(res => res.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'genart-image.png';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        })
-        .catch(() => alert('An error occurred while downloading the image.'));
+    const link = document.createElement('a');
+    link.href = DOMElements.previewImage.src;
+    link.download = 'genart-image.png';
+    link.click();
 }
