@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK (ensure it's initialized only once for serverless functions)
+// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -14,16 +14,19 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// --- Special Credits for Specific Users ---
-const specialUsers = [
-    { email: "developer.techsquadz@gmail.com", credits: 5000 },
-    { email: "interactweb24@gmail.com", credits: 5000 },
-    { email: "anuj.suthar@gmail.com", credits: 5000 },
-    { email: "nilsone230384.002@gmail.com", credits: 5000 },
-    { email: "omnp646@gmail.com", credits: 5000 },
-];
+// --- Default Plan for Free Users ---
+const freePlan = {
+    name: 'Free',
+    credits: 0,
+    expiryDate: null
+};
 
 export default async function handler(req, res) {
+    // This endpoint only handles GET requests to fetch the user's current plan status.
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     if (!idToken) {
         return res.status(401).json({ error: 'No token provided.' });
@@ -32,55 +35,27 @@ export default async function handler(req, res) {
     try {
         const user = await admin.auth().verifyIdToken(idToken);
         const userRef = db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
 
-        // Handle GET request (Fetch credits)
-        if (req.method === 'GET') {
-            const specialUser = specialUsers.find(su => su.email === user.email);
-            const userDoc = await userRef.get();
-            const isNew = !userDoc.exists; // Check if the user is new before any changes
-
-            if (specialUser) {
-                if (isNew || userDoc.data().credits !== specialUser.credits) {
-                    await userRef.set({
-                        email: user.email,
-                        credits: specialUser.credits,
-                    }, { merge: true });
-                    console.log(`Set/updated special credits for ${user.email} to ${specialUser.credits}`);
-                }
-                return res.status(200).json({ credits: specialUser.credits, isNewUser: isNew });
-            }
-
-            if (userDoc.exists) {
-                // Existing regular user
-                return res.status(200).json({ credits: userDoc.data().credits, isNewUser: false });
-            } else {
-                // New regular user
-                const initialCredits = 50; // Default free credits
-                await userRef.set({
-                    email: user.email,
-                    credits: initialCredits,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-                // Let the frontend know this user is new and what their credit balance is
-                return res.status(200).json({ credits: initialCredits, isNewUser: true });
-            }
+        if (!userDoc.exists || !userDoc.data().activePlan) {
+            // If the user has no document or no active plan, they are on the free tier.
+            return res.status(200).json(freePlan);
         }
 
-        // Handle POST request (Deduct credit)
-        if (req.method === 'POST') {
-            const userDoc = await userRef.get();
-            if (!userDoc.exists || userDoc.data().credits <= 0) {
-                return res.status(402).json({ error: 'Insufficient credits.' });
-            }
-
-            await userRef.update({
-                credits: admin.firestore.FieldValue.increment(-1)
-            });
-            const updatedDoc = await userRef.get();
-            return res.status(200).json({ newCredits: updatedDoc.data().credits });
+        const plan = userDoc.data().activePlan;
+        
+        // --- Check for Plan Expiry ---
+        // The check is ignored if expiryDate is null (e.g., for the 'Elevate' plan).
+        if (plan.expiryDate && new Date() > plan.expiryDate.toDate()) {
+            // The plan has expired. We will update the document to remove the activePlan
+            // and return the free plan details to the user for this session.
+            await userRef.update({ activePlan: admin.firestore.FieldValue.delete() });
+            console.log(`Plan for user ${user.uid} has expired and was removed.`);
+            return res.status(200).json(freePlan);
         }
 
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        // If the plan is valid and not expired, return its details.
+        return res.status(200).json(plan);
 
     } catch (error) {
         console.error("API Error in /api/credits:", error);
@@ -90,4 +65,3 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'A server error has occurred.' });
     }
 }
-
