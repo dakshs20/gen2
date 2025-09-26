@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeEventListeners();
     initializeDynamicBackground();
-    initializePricingAnimations(); // This function has been rewritten
+    initializePricingAnimations();
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
 });
 
@@ -51,9 +51,7 @@ function initializeDynamicBackground() {
     }
 }
 
-// --- REWRITTEN AND FIXED ANIMATION LOGIC ---
 function initializePricingAnimations() {
-    // Failsafe: If GSAP isn't loaded, just show the content to avoid a blank page.
     if (typeof gsap === 'undefined') {
         console.error("GSAP not loaded. Bypassing animations.");
         document.querySelectorAll('.pricing-title, .pricing-subtitle, .pricing-toggle-container, .pricing-card-wrapper').forEach(el => {
@@ -65,7 +63,6 @@ function initializePricingAnimations() {
 
     const masterTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
-    // 1. Animate the main page elements first with a nice stagger.
     masterTl.to('.pricing-title, .pricing-subtitle, .pricing-toggle-container', {
         opacity: 1,
         y: 0,
@@ -74,21 +71,17 @@ function initializePricingAnimations() {
     });
 
     const cards = gsap.utils.toArray('.pricing-card-wrapper');
-
-    // 2. Animate the card containers into view.
     masterTl.to(cards, {
         opacity: 1,
         y: 0,
         duration: 0.8,
         stagger: 0.15,
-    }, "-=0.5"); // Overlap slightly with the previous animation for a smoother flow.
+    }, "-=0.5");
 
-    // 3. Animate the content inside each card *after* the card container is visible.
     cards.forEach((card, index) => {
         const cardContentTl = gsap.timeline();
-        
         const priceEl = card.querySelector('.plan-price-amount');
-        if (!priceEl) return; // Skip if price element doesn't exist.
+        if (!priceEl) return;
 
         const price = parseFloat(priceEl.dataset.monthly);
         const priceProxy = { val: 0 };
@@ -105,8 +98,6 @@ function initializePricingAnimations() {
                      .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
                      .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
         
-        // Add this card's content animation to the master timeline, ensuring it starts
-        // only after the card wrapper has started its animation.
         masterTl.add(cardContentTl, 1 + index * 0.15);
     });
 }
@@ -136,7 +127,6 @@ function handlePriceToggle() {
     });
 }
 
-
 // --- CORE LOGIC ---
 
 function initializeEventListeners() {
@@ -157,6 +147,8 @@ function toggleModal(modal, show) {
         modal.setAttribute('aria-hidden', 'true');
         setTimeout(() => modal.style.display = 'none', 300);
     }
+}
+
 async function updateUIForAuthState(user) {
     if (user) {
         DOMElements.headerNav.innerHTML = `
@@ -175,32 +167,85 @@ async function updateUIForAuthState(user) {
             console.error("Error fetching plan:", error);
             if(DOMElements.planStatusBadge) DOMElements.planStatusBadge.textContent = 'Could not load plan.';
         }
+    } else {
+        DOMElements.headerNav.innerHTML = `
+            <a href="index.html" class="text-sm font-medium text-gray-700 hover:bg-slate-200 rounded-full px-3 py-1 transition-colors">Generator</a>
+            <button id="sign-in-btn" class="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full px-4 py-1.5 transition-colors">Sign In</button>
+        `;
+        document.getElementById('sign-in-btn').addEventListener('click', signInWithGoogle);
+        updatePlanUI({ name: 'Free' }); // Reset UI for signed out user
+    }
+}
+
 function updatePlanUI(plan) {
     document.querySelectorAll('.active-plan-badge').forEach(b => b.remove());
 
-    if (plan.name !== 'Free') {
+    if (plan.name !== 'Free' && DOMElements.planStatusBadge) {
         DOMElements.planStatusBadge.innerHTML = `Current Plan: <span class="font-bold">${plan.name}</span> (${plan.credits} credits remaining)`;
         
         const activePlanCard = document.getElementById(`plan-${plan.name.toLowerCase()}`);
         if (activePlanCard) {
             const badgeContainer = activePlanCard.querySelector('.plan-badge-container');
             if (badgeContainer) {
-                 const badge = document.createElement('div');
+                const badge = document.createElement('div');
                 badge.className = 'active-plan-badge';
                 badge.textContent = 'Active Plan';
                 badgeContainer.innerHTML = ''; 
                 badgeContainer.appendChild(badge);
             }
+        }
+    } else if (DOMElements.planStatusBadge) {
+        DOMElements.planStatusBadge.innerHTML = ''; // Clear badge if user is on Free plan
+    }
+}
+
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
         .then(() => toggleModal(DOMElements.authModal, false))
         .catch(error => console.error("Authentication Error:", error));
 }
+
 async function handlePurchase(event) {
     if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
+
+    const clickedButton = event.currentTarget;
+    const plan = clickedButton.dataset.plan;
+    const isYearly = DOMElements.pricingToggle.checked;
+    
+    const originalButtonText = clickedButton.innerHTML;
+    clickedButton.disabled = true;
+    clickedButton.innerHTML = `<span class="animate-pulse">Processing...</span>`;
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/payu', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ plan, isYearly })
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Server Error: ${response.status}`);
+        }
+
+        const { paymentData } = await response.json();
+        redirectToPayU(paymentData);
+
+    } catch (error) {
+        console.error('Payment initiation failed:', error);
+        alert(`Could not start the payment process: ${error.message}. Please try again.`);
+        clickedButton.disabled = false;
+        clickedButton.innerHTML = originalButtonText;
+    }
+}
+
 function redirectToPayU(data) {
     const form = document.createElement('form');
     form.method = 'POST';
