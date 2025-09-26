@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -12,7 +13,7 @@ if (!admin.apps.length) {
     }
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 // --- Default Plan for Free Users ---
 const freePlan = {
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
         const userRef = db.collection('users').doc(user.uid);
         const userDoc = await userRef.get();
 
-        if (!userDoc.exists || !userDoc.data().activePlan) {
+        if (!userDoc.exists() || !userDoc.data().activePlan) {
             // If the user has no document or no active plan, they are on the free tier.
             return res.status(200).json(freePlan);
         }
@@ -49,7 +50,7 @@ export default async function handler(req, res) {
         if (plan.expiryDate && new Date() > plan.expiryDate.toDate()) {
             // The plan has expired. We will update the document to remove the activePlan
             // and return the free plan details to the user for this session.
-            await userRef.update({ activePlan: admin.firestore.FieldValue.delete() });
+            await userRef.update({ activePlan: FieldValue.delete() });
             console.log(`Plan for user ${user.uid} has expired and was removed.`);
             return res.status(200).json(freePlan);
         }
@@ -65,3 +66,4 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'A server error has occurred.' });
     }
 }
+
