@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import crypto from 'crypto';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -13,7 +14,7 @@ if (!admin.apps.length) {
     }
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 // --- Server-side plan details ---
 const plans = {
@@ -60,8 +61,8 @@ export default async function handler(req, res) {
                 const newPlan = {
                     name: planDetails.name,
                     credits: planDetails.credits,
-                    purchaseDate: admin.firestore.Timestamp.fromDate(purchaseDate),
-                    expiryDate: expiryDate ? admin.firestore.Timestamp.fromDate(expiryDate) : null,
+                    purchaseDate: Timestamp.fromDate(purchaseDate),
+                    expiryDate: expiryDate ? Timestamp.fromDate(expiryDate) : null,
                 };
                 
                 // Set the activePlan for the user. This will overwrite any existing plan.
@@ -93,3 +94,4 @@ export default async function handler(req, res) {
         res.redirect(302, errorUrl.toString());
     }
 }
+
