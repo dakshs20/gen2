@@ -16,7 +16,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// --- DOM Element Caching for Performance ---
+// --- DOM Element Caching ---
 const DOMElements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,10 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.buyNowBtns = document.querySelectorAll('.buy-now-btn-white');
     DOMElements.headerNav = document.getElementById('header-nav');
     DOMElements.planStatusBadge = document.getElementById('plan-status-badge');
+    DOMElements.pricingToggle = document.getElementById('pricing-toggle-checkbox');
+    DOMElements.priceAmounts = document.querySelectorAll('.plan-price-amount');
 
     initializeEventListeners();
-    initializeDynamicBackground(); // Initialize mouse-follow effect
-    initializePricingAnimations(); // Initialize new entrance animations
+    initializeDynamicBackground();
+    initializePricingAnimations();
     onAuthStateChanged(auth, user => updateUIForAuthState(user));
 });
 
@@ -39,51 +41,69 @@ function initializeDynamicBackground() {
     const pricingPage = document.querySelector('.pricing-page');
     if (pricingPage) {
         window.addEventListener('mousemove', e => {
-            pricingPage.style.setProperty('--x', e.clientX + 'px');
-            pricingPage.style.setProperty('--y', e.clientY + 'px');
+            gsap.to(pricingPage, {
+                '--x': `${e.clientX}px`,
+                '--y': `${e.clientY}px`,
+                duration: 0.5,
+                ease: 'sine.out'
+            });
         });
     }
 }
 
 function initializePricingAnimations() {
-    // Master timeline for a cohesive animation sequence
-    const masterTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    const masterTl = gsap.timeline({ defaults: { ease: 'expo.out' } });
 
-    // 1. Animate title and subtitle first
-    masterTl.to('.pricing-title', { opacity: 1, y: 0, duration: 0.8 }, 0.2)
-            .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 0.8 }, 0.4);
+    masterTl.to('.pricing-title', { opacity: 1, y: 0, duration: 1 }, 0.2)
+            .to('.pricing-subtitle', { opacity: 1, y: 0, duration: 1 }, 0.4)
+            .to('.pricing-toggle-container', { opacity: 1, y: 0, duration: 1 }, 0.6);
 
     const cards = gsap.utils.toArray('.pricing-card-wrapper');
-    
-    // 2. Animate the card wrappers into view with a stagger
-    masterTl.to(cards, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.2
-    }, 0.6);
+    masterTl.to(cards, { opacity: 1, y: 0, stagger: 0.2, duration: 1 }, 0.8);
 
-    // 3. Animate the inner content of each card after it appears
     cards.forEach((card, i) => {
-        const priceEl = card.querySelector('.plan-price-amount');
-        const price = parseFloat(priceEl.textContent.replace('$', ''));
-        const priceProxy = { val: 0 };
-
-        // This timeline animates the content inside each card
-        const cardContentTl = gsap.timeline();
+        const cardContentTl = gsap.timeline({
+            delay: 1 + i * 0.2
+        });
         
-        cardContentTl.from(card.querySelectorAll('h2, .text-sm'), { opacity: 0, y: 20, stagger: 0.1, duration: 0.6 })
+        const priceEl = card.querySelector('.plan-price-amount');
+        const price = parseFloat(priceEl.dataset.monthly);
+        const priceProxy = { val: 0 };
+        
+        cardContentTl.from(card.querySelectorAll('h2, .text-sm'), { opacity: 0, y: 20, stagger: 0.15, duration: 0.8 })
                      .to(priceProxy, {
                          val: price,
-                         duration: 1,
-                         ease: 'power2.out',
+                         duration: 1.2,
+                         ease: 'power3.out',
                          onUpdate: () => { priceEl.textContent = '$' + Math.ceil(priceProxy.val); }
                      }, "<0.2")
-                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
-                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
+                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.6 }, "<0.3")
+                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.8 }, "<0.2");
+    });
+}
 
-        // Add the card's content animation to the master timeline with a delay
-        masterTl.add(cardContentTl, 1 + i * 0.2);
+function handlePriceToggle() {
+    const isYearly = DOMElements.pricingToggle.checked;
+    DOMElements.priceAmounts.forEach(el => {
+        const monthlyPrice = el.dataset.monthly;
+        const yearlyPrice = el.dataset.yearly;
+        const targetPrice = isYearly ? yearlyPrice : monthlyPrice;
+
+        const priceProxy = { val: parseFloat(el.textContent.replace('$', '')) };
+        
+        gsap.to(priceProxy, {
+            val: targetPrice,
+            duration: 0.8,
+            ease: 'power3.inOut',
+            onUpdate: () => {
+                el.textContent = '$' + Math.round(priceProxy.val);
+            }
+        });
+
+        const siblingSpan = el.nextElementSibling;
+        if(siblingSpan) {
+            siblingSpan.textContent = isYearly ? '/year' : '/month';
+        }
     });
 }
 
@@ -96,6 +116,7 @@ function initializeEventListeners() {
     DOMElements.buyNowBtns.forEach(btn => {
         btn.addEventListener('click', (event) => handlePurchase(event));
     });
+    DOMElements.pricingToggle?.addEventListener('change', handlePriceToggle);
 }
 
 function toggleModal(modal, show) {
@@ -107,8 +128,6 @@ function toggleModal(modal, show) {
         modal.setAttribute('aria-hidden', 'true');
         setTimeout(() => modal.style.display = 'none', 300);
     }
-}
-
 async function updateUIForAuthState(user) {
     if (user) {
         DOMElements.headerNav.innerHTML = `
@@ -127,16 +146,6 @@ async function updateUIForAuthState(user) {
             console.error("Error fetching plan:", error);
             if(DOMElements.planStatusBadge) DOMElements.planStatusBadge.textContent = 'Could not load plan.';
         }
-    } else {
-         DOMElements.headerNav.innerHTML = `
-            <a href="index.html" class="text-sm font-medium text-gray-700 hover:bg-slate-200 rounded-full px-3 py-1 transition-colors">Generator</a>
-            <button id="sign-in-btn" class="text-sm font-medium text-white bg-[#517CBE] hover:bg-[#43649d] px-4 py-1.5 rounded-full transition-colors">Sign In</button>
-        `;
-        document.getElementById('sign-in-btn').addEventListener('click', () => toggleModal(DOMElements.authModal, true));
-        updatePlanUI({ name: 'Free', credits: 10 });
-    }
-}
-
 function updatePlanUI(plan) {
     document.querySelectorAll('.active-plan-badge').forEach(b => b.remove());
 
@@ -153,49 +162,16 @@ function updatePlanUI(plan) {
                 badgeContainer.innerHTML = ''; 
                 badgeContainer.appendChild(badge);
             }
-        }
-    } else {
-        DOMElements.planStatusBadge.innerHTML = `You are on the <span class="font-bold">Free Plan</span> with ${plan.credits} credits.`;
-    }
-}
-
-
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
         .then(() => toggleModal(DOMElements.authModal, false))
         .catch(error => console.error("Authentication Error:", error));
 }
-
 async function handlePurchase(event) {
     if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
-
-    const clickedButton = event.currentTarget;
-    const plan = clickedButton.dataset.plan;
-    const originalButtonText = clickedButton.innerHTML;
-    clickedButton.disabled = true;
-    clickedButton.innerHTML = `<span class="animate-pulse">Processing...</span>`;
-
-    try {
-        const token = await auth.currentUser.getIdToken();
-        const response = await fetch('/api/payu', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ plan })
-        });
-        if (!response.ok) throw new Error(await response.text());
-        const { paymentData } = await response.json();
-        redirectToPayU(paymentData);
-    } catch (error) {
-        console.error('Payment initiation failed:', error);
-        alert(`Could not start payment. Please try again.`);
-        clickedButton.disabled = false;
-        clickedButton.innerHTML = originalButtonText;
-    }
-}
-
 function redirectToPayU(data) {
     const form = document.createElement('form');
     form.method = 'POST';
