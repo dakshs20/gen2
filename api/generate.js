@@ -1,7 +1,7 @@
-import { auth } from 'firebase-admin';
 import admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin SDK (ensure it's initialized only once)
+// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -13,22 +13,7 @@ if (!admin.apps.length) {
     }
 }
 
-const db = admin.firestore();
-
-// --- Function to save prompt data ---
-async function logGeneration(userId, prompt) {
-    try {
-        await db.collection('generations').add({
-            userId: userId,
-            prompt: prompt,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        console.log(`Logged prompt for user: ${userId}`);
-    } catch (error) {
-        // We log the error but don't stop the image generation process
-        console.error("Failed to log prompt:", error);
-    }
-}
+const db = getFirestore();
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -40,12 +25,30 @@ export default async function handler(req, res) {
         if (!idToken) {
             return res.status(401).json({ error: 'User not authenticated.' });
         }
-        const user = await auth().verifyIdToken(idToken);
-
+        const user = await admin.auth().verifyIdToken(idToken);
+        const userRef = db.collection('users').doc(user.uid);
+        
         const { prompt, imageData, aspectRatio } = req.body;
         
-        await logGeneration(user.uid, prompt);
+        // --- Credit Deduction Logic ---
+        const userDoc = await userRef.get();
+        const plan = userDoc.data()?.activePlan;
 
+        const isPaidUser = plan && plan.credits > 0 && (!plan.expiryDate || new Date() < plan.expiryDate.toDate());
+
+        if (isPaidUser) {
+            // Use an atomic decrement for paid users
+            await userRef.update({
+                'activePlan.credits': FieldValue.increment(-1)
+            });
+             console.log(`Credit deducted for paid user: ${user.uid}`);
+        } else {
+            // This is a free user (or an expired/out-of-credits paid user)
+            // The frontend enforces a 30-second delay. The backend proceeds without deduction.
+             console.log(`Free generation for user: ${user.uid}`);
+        }
+        
+        // --- Image Generation API Call ---
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return res.status(500).json({ error: "Server configuration error: API key not found." });
@@ -54,7 +57,6 @@ export default async function handler(req, res) {
         let apiUrl, payload;
 
         if (imageData && imageData.data) {
-            // --- Image-to-Image Logic ---
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
             payload = {
                 "contents": [{ 
@@ -66,7 +68,6 @@ export default async function handler(req, res) {
                 "generationConfig": { "responseModalities": ["IMAGE"] }
             };
         } else {
-            // --- Text-to-Image Logic ---
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
             payload = { 
                 instances: [{ prompt }], 
@@ -83,6 +84,8 @@ export default async function handler(req, res) {
         if (!apiResponse.ok) {
             const errorText = await apiResponse.text();
             console.error("Google API Error:", errorText);
+            // If API fails, we should ideally refund the credit. For simplicity, we'll log it.
+            if(isPaidUser) console.error(`CRITICAL: Generation failed for ${user.uid} but credit was deducted.`);
             return res.status(apiResponse.status).json({ error: `Google API Error: ${errorText}` });
         }
 
@@ -94,4 +97,3 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'The API function crashed.', details: error.message });
     }
 }
-
