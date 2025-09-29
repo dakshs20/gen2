@@ -1,7 +1,5 @@
 import admin from 'firebase-admin';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -13,13 +11,9 @@ if (!admin.apps.length) {
     }
 }
 
-const db = getFirestore();
+const db = admin.firestore();
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     if (!idToken) {
         return res.status(401).json({ error: 'No token provided.' });
@@ -28,49 +22,92 @@ export default async function handler(req, res) {
     try {
         const user = await admin.auth().verifyIdToken(idToken);
         const userRef = db.collection('users').doc(user.uid);
-        let userDoc = await userRef.get();
 
-        // --- New User Onboarding: Grant 10 Free Credits ---
-        if (!userDoc.exists) {
-            await userRef.set({
-                email: user.email,
-                freeCredits: 10, // Grant 10 free credits on first sign-in
-                createdAt: FieldValue.serverTimestamp()
+        // GET request: Fetch user data (plan, credits, etc.)
+        if (req.method === 'GET') {
+            const userDoc = await userRef.get();
+
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                // Check for expired plans
+                if (userData.expiryDate && userData.expiryDate.toDate() < new Date()) {
+                    // Plan has expired, reset to Free
+                    await userRef.set({
+                        email: user.email,
+                        planName: 'Free',
+                        credits: 0,
+                        purchaseDate: null,
+                        expiryDate: null
+                    }, { merge: true });
+                     return res.status(200).json({ planName: 'Free', credits: 0 });
+                }
+                return res.status(200).json(userData);
+            } else {
+                // New user, set up with Free plan
+                const freePlanData = {
+                    email: user.email,
+                    planName: 'Free',
+                    credits: 0,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    purchaseDate: null,
+                    expiryDate: null
+                };
+                await userRef.set(freePlanData);
+                return res.status(200).json(freePlanData);
+            }
+        }
+
+        // POST request: Deduct a credit for generation
+        if (req.method === 'POST') {
+             await db.runTransaction(async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists) {
+                    throw new Error("User document does not exist!");
+                }
+                
+                const userData = userDoc.data();
+                
+                // Free users are handled on the frontend with a timer, no credit deduction
+                if (userData.planName === 'Free' || !userData.planName) {
+                    // Should not happen if frontend logic is correct, but as a safeguard.
+                     res.status(200).json({ message: "Free user, no credits deducted."});
+                     return;
+                }
+
+                if (userData.credits <= 0) {
+                     res.status(402).json({ error: 'Insufficient credits.' });
+                     return;
+                }
+                
+                 // Check for expiry again within the transaction for atomicity
+                if (userData.expiryDate && userData.expiryDate.toDate() < new Date()) {
+                    transaction.set(userRef, {
+                        planName: 'Free',
+                        credits: 0,
+                        purchaseDate: null,
+                        expiryDate: null
+                    }, { merge: true });
+                     res.status(402).json({ error: 'Your plan has expired.' });
+                     return;
+                }
+
+                transaction.update(userRef, {
+                    credits: admin.firestore.FieldValue.increment(-1)
+                });
+                
+                const newCredits = userData.credits - 1;
+                res.status(200).json({ newCredits: newCredits });
             });
-            userDoc = await userRef.get(); // Re-fetch the document after creation
+            return; // Exit after transaction
         }
 
-        const userData = userDoc.data();
-        const activePlan = userData.activePlan;
-
-        // --- Check for Plan Expiry ---
-        if (activePlan && activePlan.expiryDate && new Date() > activePlan.expiryDate.toDate()) {
-            await userRef.update({ activePlan: FieldValue.delete() });
-            // If plan expires, they revert to the free tier. Return their free credit status.
-            return res.status(200).json({
-                name: 'Free',
-                credits: userData.freeCredits || 0
-            });
-        }
-        
-        // If they have a valid, active plan, return its details.
-        if (activePlan) {
-            return res.status(200).json(activePlan);
-        }
-
-        // --- Default Free User ---
-        // If no active plan, they are on the free tier.
-        return res.status(200).json({
-            name: 'Free',
-            credits: userData.freeCredits || 0
-        });
+        return res.status(405).json({ error: 'Method Not Allowed' });
 
     } catch (error) {
         console.error("API Error in /api/credits:", error);
         if (error.code === 'auth/id-token-expired') {
             return res.status(401).json({ error: 'Token expired.' });
         }
-        return res.status(500).json({ error: 'A server error has occurred.' });
+        res.status(500).json({ error: 'A server error occurred.' });
     }
 }
-
