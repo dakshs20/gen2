@@ -1,8 +1,8 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
     authDomain: "genart-a693a.firebaseapp.com",
@@ -15,68 +15,42 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// --- DOM Element Caching ---
+// --- DOM Element Caching for Performance ---
 const DOMElements = {};
-let userPlanUnsubscribe = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Cache all DOM elements once to avoid repeated lookups
     DOMElements.authBtn = document.getElementById('auth-btn');
+    DOMElements.mobileAuthBtn = document.getElementById('mobile-auth-btn');
     DOMElements.authModal = document.getElementById('auth-modal');
     DOMElements.googleSignInBtn = document.getElementById('google-signin-btn');
     DOMElements.closeModalBtn = document.getElementById('close-modal-btn');
+    DOMElements.generationCounter = document.getElementById('generation-counter');
+    DOMElements.mobileGenerationCounter = document.getElementById('mobile-generation-counter');
     DOMElements.buyNowBtns = document.querySelectorAll('.buy-now-btn');
-    DOMElements.planBadgeDesktop = document.getElementById('plan-badge-desktop');
-    DOMElements.planBadgeMobile = document.getElementById('plan-badge-mobile');
-    DOMElements.pricingCards = document.querySelectorAll('.pricing-card');
+    DOMElements.cursorDot = document.querySelector('.cursor-dot');
+    DOMElements.cursorOutline = document.querySelector('.cursor-outline');
+    DOMElements.mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    DOMElements.mobileMenu = document.getElementById('mobile-menu');
 
     initializeEventListeners();
-    initializeSwiper();
+    initializeCursor();
 });
 
 function initializeEventListeners() {
-    onAuthStateChanged(auth, user => {
-        updateUIForAuthState(user);
-        if (user) {
-            listenToUserPlan(user.uid);
-        } else {
-            if (userPlanUnsubscribe) userPlanUnsubscribe();
-            resetPlanUI();
-        }
-    });
+    onAuthStateChanged(auth, user => updateUIForAuthState(user));
 
-    DOMElements.authBtn.addEventListener('click', handleAuthAction);
-    DOMElements.googleSignInBtn.addEventListener('click', signInWithGoogle);
-    DOMElements.closeModalBtn.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
+    [DOMElements.authBtn, DOMElements.mobileAuthBtn].forEach(btn => btn?.addEventListener('click', handleAuthAction));
+    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
+    DOMElements.mobileMenuBtn?.addEventListener('click', () => DOMElements.mobileMenu.classList.toggle('hidden'));
 
     DOMElements.buyNowBtns.forEach(btn => {
-        btn.addEventListener('click', (event) => handlePurchase(event));
+        // Using 'mousedown' for better responsiveness on touch devices like iPhones.
+        btn.addEventListener('mousedown', (event) => handlePurchase(event));
     });
-
-    DOMElements.pricingCards.forEach(card => {
-        const info = card.querySelector('.plan-info');
-        if (info) {
-            card.addEventListener('mouseenter', () => info.classList.remove('hidden'));
-            card.addEventListener('mouseleave', () => info.classList.add('hidden'));
-        }
-    });
-}
-
-function initializeSwiper() {
-    if (window.innerWidth < 768) {
-        new Swiper('.swiper-container', {
-            loop: false,
-            slidesPerView: 1,
-            spaceBetween: 20,
-            centeredSlides: true,
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-            },
-        });
-    }
 }
 
 // --- Core Logic ---
@@ -84,19 +58,38 @@ function initializeSwiper() {
 function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
-        modal.classList.remove('opacity-0', 'invisible');
         modal.setAttribute('aria-hidden', 'false');
+        modal.classList.remove('opacity-0', 'invisible');
     } else {
-        modal.classList.add('opacity-0', 'invisible');
         modal.setAttribute('aria-hidden', 'true');
+        modal.classList.add('opacity-0', 'invisible');
     }
 }
 
-function updateUIForAuthState(user) {
+async function updateUIForAuthState(user) {
     if (user) {
         DOMElements.authBtn.textContent = 'Sign Out';
+        DOMElements.mobileAuthBtn.textContent = 'Sign Out';
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) {
+                const data = await response.json();
+                DOMElements.generationCounter.textContent = `Credits: ${data.credits}`;
+                DOMElements.mobileGenerationCounter.textContent = `Credits: ${data.credits}`;
+            } else {
+                throw new Error("Failed to fetch credits");
+            }
+        } catch (error) {
+            console.error("Error fetching credits:", error);
+            DOMElements.generationCounter.textContent = "Credits: Error";
+            DOMElements.mobileGenerationCounter.textContent = "Credits: Error";
+        }
     } else {
         DOMElements.authBtn.textContent = 'Sign In';
+        DOMElements.mobileAuthBtn.textContent = 'Sign In';
+        DOMElements.generationCounter.textContent = 'Sign in for credits';
+        DOMElements.mobileGenerationCounter.textContent = 'Sign in for credits';
     }
 }
 
@@ -111,97 +104,17 @@ function handleAuthAction() {
 function signInWithGoogle() {
     signInWithPopup(auth, provider)
         .then(() => toggleModal(DOMElements.authModal, false))
-        .catch(error => console.error("Authentication Error:", error));
+        .catch(error => {
+            console.error("Authentication Error:", error);
+            alert("Failed to sign in. Please try again.");
+        });
 }
-
-function listenToUserPlan(userId) {
-    const userDocRef = doc(db, 'users', userId);
-    userPlanUnsubscribe = onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-            const userData = doc.data();
-            updatePlanUI(userData);
-        } else {
-            resetPlanUI();
-        }
-    });
-}
-
-function updatePlanUI(userData) {
-    const { planName, credits, expiryDate } = userData;
-    const plan = planName || 'Free';
-    const badgeText = `Plan: ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
-
-    DOMElements.planBadgeDesktop.textContent = badgeText;
-    DOMElements.planBadgeMobile.textContent = badgeText;
-
-    DOMElements.buyNowBtns.forEach(btn => {
-        const btnPlan = btn.dataset.plan;
-        if (btnPlan === plan.toLowerCase()) {
-            btn.textContent = 'Current Plan';
-            btn.disabled = true;
-            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
-            btn.classList.remove('bg-gray-800', 'bg-blue-500', 'hover:bg-black', 'hover:bg-blue-600');
-        } else {
-            btn.textContent = `Get ${btnPlan.charAt(0).toUpperCase() + btnPlan.slice(1)}`;
-            btn.disabled = false;
-            btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            if (btnPlan === 'create') {
-                 btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
-            } else {
-                 btn.classList.add('bg-gray-800', 'hover:bg-black');
-            }
-        }
-    });
-
-    // Update expiry countdown
-    updateExpiryCountdown(plan, expiryDate);
-}
-
-function updateExpiryCountdown(plan, expiryDate) {
-    // Clear existing countdowns
-    document.querySelectorAll('.expiry-countdown').forEach(el => el.remove());
-
-    if (expiryDate && (plan === 'inspire' || plan === 'create')) {
-        const expiry = expiryDate.toDate();
-        const now = new Date();
-        const diffTime = expiry - now;
-        
-        if (diffTime > 0) {
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const card = document.querySelector(`[data-plan="${plan}"]`).closest('.pricing-card');
-            if (card) {
-                const countdownEl = document.createElement('p');
-                countdownEl.className = 'expiry-countdown text-xs text-center text-red-500 mt-2 font-semibold';
-                countdownEl.textContent = `Expires in ${diffDays} days`;
-                card.appendChild(countdownEl);
-            }
-        }
-    }
-}
-
-
-function resetPlanUI() {
-    DOMElements.planBadgeDesktop.textContent = 'Plan: Free';
-    DOMElements.planBadgeMobile.textContent = 'Plan: Free';
-    DOMElements.buyNowBtns.forEach(btn => {
-        const plan = btn.dataset.plan;
-        btn.textContent = `Get ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
-        btn.disabled = false;
-        btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-         if (plan === 'create') {
-            btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
-        } else {
-            btn.classList.add('bg-gray-800', 'hover:bg-black');
-        }
-    });
-     document.querySelectorAll('.expiry-countdown').forEach(el => el.remove());
-}
-
 
 async function handlePurchase(event) {
     const clickedButton = event.currentTarget;
     const plan = clickedButton.dataset.plan;
 
+    // This is the feature to prompt non-logged-in users to sign in.
     if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
@@ -232,7 +145,7 @@ async function handlePurchase(event) {
 
     } catch (error) {
         console.error('Payment initiation failed:', error);
-        alert(`Could not start payment: ${error.message}`);
+        alert(`Could not start the payment process: ${error.message}. Please try again.`);
         clickedButton.disabled = false;
         clickedButton.innerHTML = originalButtonText;
     }
@@ -256,3 +169,31 @@ function redirectToPayU(data) {
     document.body.appendChild(form);
     form.submit();
 }
+
+// --- Utility: Custom Cursor ---
+function initializeCursor() {
+    if (!DOMElements.cursorDot || !DOMElements.cursorOutline) return;
+    
+    let mouseX = 0, mouseY = 0, outlineX = 0, outlineY = 0;
+    window.addEventListener('mousemove', e => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    });
+
+    const animate = () => {
+        DOMElements.cursorDot.style.left = `${mouseX}px`;
+        DOMElements.cursorDot.style.top = `${mouseY}px`;
+        const ease = 0.15;
+        outlineX += (mouseX - outlineX) * ease;
+        outlineY += (mouseY - outlineY) * ease;
+        DOMElements.cursorOutline.style.transform = `translate(calc(${outlineX}px - 50%), calc(${outlineY}px - 50%))`;
+        requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+
+    document.querySelectorAll('a, button').forEach(el => {
+        el.addEventListener('mouseover', () => DOMElements.cursorOutline.classList.add('cursor-hover'));
+        el.addEventListener('mouseout', () => DOMElements.cursorOutline.classList.remove('cursor-hover'));
+    });
+}
+
