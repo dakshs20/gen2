@@ -5,8 +5,12 @@ import admin from 'firebase-admin';
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    } catch (error) { console.error("Firebase Admin Initialization Error in payu.js:", error); }
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } catch (error) {
+        console.error("Firebase Admin Initialization Error in payu.js:", error);
+    }
 }
 
 export default async function handler(req, res) {
@@ -23,21 +27,18 @@ export default async function handler(req, res) {
         }
         
         const user = await auth().verifyIdToken(idToken);
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid user token.' });
-        }
 
-        const PRICING = {
-            inspire: { amount: '9.00', credits: 575, name: "Inspire Pack" },
-            create:  { amount: '18.00', credits: 975, name: "Create Pack" },
-            elevate: { amount: '29.00', credits: 1950, name: "Elevate Pack" }
+        const pricing = {
+            inspire: { amount: '798.00', credits: 575 },
+            create:  { amount: '1596.00', credits: 975 },
+            elevate: { amount: '2571.00', credits: 1950 }
         };
 
-        if (!PRICING[plan]) {
+        if (!pricing[plan]) {
             return res.status(400).json({ error: 'Invalid plan selected.' });
         }
 
-        const { amount, name } = PRICING[plan];
+        const { amount } = pricing[plan];
         const key = process.env.PAYU_CLIENT_ID;
         const salt = process.env.PAYU_SECRET_KEY;
 
@@ -46,28 +47,26 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Server payment configuration error.' });
         }
         
-        const txnid = `GENART-${Date.now()}`;
-        const productinfo = name;
+        const txnid = `GENART-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+        const productinfo = `GenArt Credits - ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`;
         const firstname = user.name || 'GenArt User';
         const email = user.email || '';
-        const udf1 = user.uid; // User's Firebase ID
-        const udf2 = plan; // Pass the plan name for the callback
+        const udf1 = user.uid; 
         
         const surl = `${req.headers.origin}/api/payu-callback`;
         const furl = `${req.headers.origin}/api/payu-callback`;
 
-        const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|||||||||${salt}`;
-        const hash = crypto.createHash('sha512').update(hashString).digest('hex');
+        const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}||||||||||${salt}`;
+        const hash = crypto.createHash('sha52_1').update(hashString).digest('hex');
 
         const paymentData = {
-            key, txnid, amount, productinfo, firstname, email, surl, furl, hash, udf1, udf2
+            key, txnid, amount, productinfo, firstname, email, surl, furl, hash, udf1,
         };
 
         res.status(200).json({ paymentData });
 
     } catch (error) {
-        console.error("PayU API Error:", error);
-        res.status(500).json({ error: 'Could not start payment process.' });
+        console.error("PayU API Error in payu.js:", error);
+        res.status(500).json({ error: 'Could not start the payment process.' });
     }
 }
-
