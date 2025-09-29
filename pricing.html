@@ -1,100 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plans for Every Creator - GenArt</title>
-    <meta name="description" content="Flexible pricing plans for GenArt AI. Choose a monthly or yearly plan and get instant credits to start creating.">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Pricing Plans - GenArt</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- Razorpay Checkout Script -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .plan-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .plan-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        #billing-toggle-bg {
+            transition: left 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .price-value, .credits-value {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 font-['Inter',_sans-serif] antialiased">
-    <!-- Animated Gradient Background -->
-    <div id="animated-gradient-bg"></div>
 
-    <!-- Main App Container -->
-    <div id="app-container" class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-screen">
-        
-        <header class="relative flex justify-between items-center py-5">
-             <a href="index.html">
-                 <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-7 w-auto">
-            </a>
-            <div id="header-auth-section" class="hidden md:flex items-center space-x-6">
-                <a href="dashboard.html" class="text-sm font-medium text-slate-700 hover:text-slate-900">Dashboard</a>
-                <div id="generation-counter" class="text-sm font-medium text-slate-500"></div>
-                <button id="auth-btn" class="text-sm font-medium border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                    Sign In
-                </button>
-            </div>
-            <div class="md:hidden">
-                <button id="mobile-menu-btn" class="p-2 rounded-md text-slate-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-            </div>
-            <div id="mobile-menu" class="hidden md:hidden absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50 border border-slate-200">
-                <div class="p-2">
-                    <a href="dashboard.html" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">Dashboard</a>
-                    <div class="border-t my-1 border-slate-200"></div>
-                    <div id="mobile-generation-counter" class="px-2 py-2 text-sm text-center text-slate-600"></div>
-                    <button id="mobile-auth-btn" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">
-                        Sign In
-                    </button>
-                </div>
-            </div>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+
+        <!-- Header Section -->
+        <header class="text-center mb-12 sm:mb-16">
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
+                Plans for every creator
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-600">
+                Credits are used for generations (1 credit = 1 generation). Speeds are approximate.
+            </p>
         </header>
 
-        <main class="flex-grow flex flex-col items-center justify-center text-center py-16 sm:py-24">
-            <div class="w-full max-w-4xl">
-                <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">Plans for every creator</h1>
-                <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Credits fuel your creations, with an average generation speed of 17 seconds. Yearly plans offer the best value.</p>
-                
-                <!-- Billing Toggle -->
-                <div class="mt-10 flex justify-center items-center space-x-4">
-                    <span class="text-sm font-semibold text-slate-800">Monthly</span>
-                    <label for="billing-toggle" class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="billing-toggle" class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
-                    <span class="text-sm font-semibold text-slate-800">
-                        Yearly
-                        <span class="ml-1 text-xs font-bold text-emerald-500 bg-emerald-100 px-2 py-0.5 rounded-full">Save 15%</span>
-                    </span>
-                </div>
-                <p class="mt-2 text-xs text-slate-500">Toggle billing: Monthly or Yearly (billed once). Yearly purchases distribute credits monthly over 12 months.</p>
-
-                <!-- Pricing Grid -->
-                <div id="pricing-grid" class="mt-12 grid md:grid-cols-3 gap-8 text-left">
-                    <!-- Plan Cards will be dynamically inserted here by pricing.js -->
-                </div>
+        <!-- Billing Toggle -->
+        <div class="flex justify-center mb-10">
+            <div class="relative flex items-center bg-gray-200 rounded-full p-1.5">
+                <div id="billing-toggle-bg" class="absolute h-full w-1/2 top-0 left-0 bg-white rounded-full shadow-md"></div>
+                <button id="monthly-btn" class="relative z-10 w-28 py-2 text-sm font-semibold rounded-full focus:outline-none">Monthly</button>
+                <button id="yearly-btn" class="relative z-10 w-28 py-2 text-sm font-semibold rounded-full focus:outline-none text-gray-500">Yearly</button>
             </div>
-        </main>
-    </div>
+        </div>
 
-    <!-- Sign In Modal -->
-    <div id="auth-modal" aria-hidden="true" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
-            <h2 class="text-2xl font-semibold text-slate-800 mb-2">Sign In Required</h2>
-            <p class="text-slate-500 mb-6">Please sign in to choose a plan.</p>
-            <button id="google-signin-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 flex items-center justify-center space-x-2 transition-colors">
-                 <span>Sign In with Google</span>
-            </button>
-            <button class="close-modal-btn mt-4 text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+        <!-- Pricing Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+
+            <!-- Hobby Plan Card -->
+            <div id="hobby-card" data-plan="hobby" class="plan-card bg-white rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-indigo-600">Hobby Plan</h3>
+                <div class="mt-4">
+                    <span class="credits-value text-5xl font-extrabold text-gray-900">575</span>
+                    <span class="text-lg font-medium text-gray-500">credits</span>
+                </div>
+                 <div class="mt-2">
+                    <span class="text-4xl font-bold">₹<span class="price-value">798</span></span>
+                    <span class="text-gray-500">/mo</span>
+                </div>
+                <p class="text-sm text-gray-500 mt-1 h-12" id="hobby-price-breakdown">&nbsp;</p>
+                <p class="mt-6 text-gray-600 text-sm">Perfect for hobbyists & casual creators.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-700 flex-grow">
+                    <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>17 sec/gen Speed</li>
+                    <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>Credits Expire in 3 months</li>
+                </ul>
+                <button class="choose-plan-btn w-full mt-8 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors">Get Started</button>
+            </div>
+
+            <!-- Create Plan Card -->
+            <div id="create-card" data-plan="create" class="plan-card bg-white rounded-2xl border-2 border-indigo-600 p-8 flex flex-col relative">
+                <div class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Most Popular</div>
+                <h3 class="text-lg font-semibold text-indigo-600">Create Plan</h3>
+                 <div class="mt-4">
+                    <span class="credits-value text-5xl font-extrabold text-gray-900">975</span>
+                    <span class="text-lg font-medium text-gray-500">credits</span>
+                </div>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold">₹<span class="price-value">1596</span></span>
+                    <span class="text-gray-500">/mo</span>
+                </div>
+                 <p class="text-sm text-gray-500 mt-1 h-12" id="create-price-breakdown">&nbsp;</p>
+                <p class="mt-6 text-gray-600 text-sm">Perfect for regular creators & freelancers.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-700 flex-grow">
+                    <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>17 sec/gen Speed</li>
+                    <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>Credits Expire in 5 months</li>
+                </ul>
+                <button class="choose-plan-btn w-full mt-8 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors">Upgrade Your Workflow</button>
+            </div>
+
+            <!-- Elevate Plan Card -->
+            <div id="elevate-card" data-plan="elevate" class="plan-card bg-white rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-indigo-600">Elevate Plan</h3>
+                <div class="mt-4">
+                    <span class="credits-value text-5xl font-extrabold text-gray-900">1950</span>
+                    <span class="text-lg font-medium text-gray-500">credits</span>
+                </div>
+                 <div class="mt-2">
+                    <span class="text-4xl font-bold">₹<span class="price-value">2571</span></span>
+                    <span class="text-gray-500">/mo</span>
+                </div>
+                 <p class="text-sm text-gray-500 mt-1 h-12" id="elevate-price-breakdown">&nbsp;</p>
+                <p class="mt-6 text-gray-600 text-sm">Perfect for professionals & agencies.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-700 flex-grow">
+                   <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>17 sec/gen Speed</li>
+                    <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>Credits Never Expire</li>
+                </ul>
+                <button class="choose-plan-btn w-full mt-8 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors">Scale with Confidence</button>
+            </div>
         </div>
     </div>
-    
+
     <!-- Checkout Summary Modal -->
-    <div id="checkout-modal" aria-hidden="true" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible">
-        <div id="checkout-modal-content" class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-left transition-transform duration-300 scale-95">
-             <!-- Modal content will be dynamically inserted here -->
+    <div id="checkout-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible" aria-hidden="true">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Order Summary</h2>
+            <div class="space-y-3 text-gray-700">
+                <div class="flex justify-between"><span class="font-medium">Plan:</span> <span id="modal-plan-name"></span></div>
+                <div class="flex justify-between"><span class="font-medium">Billing:</span> <span id="modal-billing-cycle"></span></div>
+                <div class="border-t pt-3 mt-3 flex justify-between text-lg font-bold">
+                    <span>You will be charged:</span>
+                    <span id="modal-total-charge"></span>
+                </div>
+                <div class="text-sm text-gray-500" id="modal-credit-info-now"></div>
+                 <div class="text-sm text-gray-500" id="modal-credit-info-later"></div>
+                <div class="text-sm text-gray-500" id="modal-expiry-info"></div>
+            </div>
+            <div class="mt-8">
+                <button id="proceed-to-payment-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors">Proceed to Secure Checkout</button>
+                <button id="close-modal-btn" class="w-full mt-3 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+            </div>
+             <p class="text-xs text-gray-400 text-center mt-4">Secure checkout via Razorpay.</p>
         </div>
     </div>
 
     <script type="module" src="pricing.js"></script>
+
 </body>
+
 </html>
+
