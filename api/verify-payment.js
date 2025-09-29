@@ -16,8 +16,8 @@ const db = admin.firestore();
 
 // --- Plan Data for Credit Allocation ---
 const plans = {
-    create: { name: 'Create Plan', credits: 575, expiry: '3 months' },
-    price: { name: 'Price Plan', credits: 975, expiry: '5 months' },
+    hobby: { name: 'Hobby Plan', credits: 575, expiry: '3 months' },
+    create: { name: 'Create Plan', credits: 975, expiry: '5 months' },
     elevate: { name: 'Elevate Plan', credits: 1950, expiry: 'Never' }
 };
 
@@ -107,3 +107,4 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+
