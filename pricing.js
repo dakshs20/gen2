@@ -1,6 +1,7 @@
 // --- Firebase and Auth Initialization ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
@@ -14,156 +15,96 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 // --- DOM Element Caching ---
 const DOMElements = {};
+let userPlanUnsubscribe = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    DOMElements.authBtn = document.getElementById('auth-btn');
     DOMElements.authModal = document.getElementById('auth-modal');
     DOMElements.googleSignInBtn = document.getElementById('google-signin-btn');
-    DOMElements.closeModalBtn = document.querySelector('#auth-modal .close-modal-btn');
-    DOMElements.buyNowBtns = document.querySelectorAll('.buy-now-btn-white');
-    DOMElements.headerNav = document.getElementById('header-nav');
-    DOMElements.planStatusBadge = document.getElementById('plan-status-badge');
+    DOMElements.closeModalBtn = document.getElementById('close-modal-btn');
+    DOMElements.buyNowBtns = document.querySelectorAll('.buy-now-btn');
+    DOMElements.planBadgeDesktop = document.getElementById('plan-badge-desktop');
+    DOMElements.planBadgeMobile = document.getElementById('plan-badge-mobile');
+    DOMElements.pricingCards = document.querySelectorAll('.pricing-card');
 
     initializeEventListeners();
-    initializeDynamicBackground();
-    initializePricingAnimations();
-    onAuthStateChanged(auth, user => updateUIForAuthState(user));
+    initializeSwiper();
 });
 
-// --- DYNAMIC UI & ANIMATIONS ---
-
-function initializeDynamicBackground() {
-    const pricingPage = document.querySelector('.pricing-page');
-    if (pricingPage) {
-        window.addEventListener('mousemove', e => {
-            gsap.to(pricingPage, {
-                '--x': `${e.clientX}px`,
-                '--y': `${e.clientY}px`,
-                duration: 0.5,
-                ease: 'sine.out'
-            });
-        });
-    }
-}
-
-function initializePricingAnimations() {
-    if (typeof gsap === 'undefined') {
-        console.error("GSAP not loaded. Bypassing animations.");
-        document.querySelectorAll('.pricing-title, .pricing-subtitle, .pricing-card-wrapper').forEach(el => {
-            el.style.opacity = 1;
-            el.style.transform = 'none';
-        });
-        return;
-    }
-
-    const masterTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
-
-    masterTl.to('.pricing-title, .pricing-subtitle', {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.2
-    });
-
-    const cards = gsap.utils.toArray('.pricing-card-wrapper');
-    masterTl.to(cards, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        stagger: 0.15,
-    }, "-=0.5");
-
-    cards.forEach((card, index) => {
-        const cardContentTl = gsap.timeline();
-        const priceEl = card.querySelector('.plan-price-amount');
-        if (!priceEl) return;
-        
-        cardContentTl.from(card.querySelectorAll('h2, .text-sm, p:not(.plan-price-amount), .plan-price-amount, span.font-medium'), { opacity: 0, y: 20, stagger: 0.05, duration: 0.6 })
-                     .to(card.querySelectorAll('ul li'), { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, "<0.3")
-                     .from(card.querySelector('button'), { opacity: 0, y: 20, duration: 0.6 }, "<0.2");
-        
-        masterTl.add(cardContentTl, 0.8 + index * 0.15);
-    });
-}
-
-// --- CORE LOGIC ---
-
 function initializeEventListeners() {
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-    DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
+    onAuthStateChanged(auth, user => {
+        updateUIForAuthState(user);
+        if (user) {
+            listenToUserPlan(user.uid);
+        } else {
+            if (userPlanUnsubscribe) userPlanUnsubscribe();
+            resetPlanUI();
+        }
+    });
+
+    DOMElements.authBtn.addEventListener('click', handleAuthAction);
+    DOMElements.googleSignInBtn.addEventListener('click', signInWithGoogle);
+    DOMElements.closeModalBtn.addEventListener('click', () => toggleModal(DOMElements.authModal, false));
+
     DOMElements.buyNowBtns.forEach(btn => {
         btn.addEventListener('click', (event) => handlePurchase(event));
     });
+
+    DOMElements.pricingCards.forEach(card => {
+        const info = card.querySelector('.plan-info');
+        if (info) {
+            card.addEventListener('mouseenter', () => info.classList.remove('hidden'));
+            card.addEventListener('mouseleave', () => info.classList.add('hidden'));
+        }
+    });
 }
+
+function initializeSwiper() {
+    if (window.innerWidth < 768) {
+        new Swiper('.swiper-container', {
+            loop: false,
+            slidesPerView: 1,
+            spaceBetween: 20,
+            centeredSlides: true,
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+        });
+    }
+}
+
+// --- Core Logic ---
 
 function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
-        modal.style.display = 'flex';
-        setTimeout(() => modal.setAttribute('aria-hidden', 'false'), 10);
+        modal.classList.remove('opacity-0', 'invisible');
+        modal.setAttribute('aria-hidden', 'false');
     } else {
+        modal.classList.add('opacity-0', 'invisible');
         modal.setAttribute('aria-hidden', 'true');
-        setTimeout(() => modal.style.display = 'none', 300);
     }
 }
 
-async function updateUIForAuthState(user) {
+function updateUIForAuthState(user) {
     if (user) {
-        DOMElements.headerNav.innerHTML = `
-            <a href="index.html" class="text-sm font-medium text-gray-700 hover:bg-slate-200 rounded-full px-3 py-1 transition-colors">Generator</a>
-            <button id="sign-out-btn" class="text-sm font-medium text-gray-700 hover:bg-slate-200 rounded-full px-3 py-1 transition-colors">Sign Out</button>
-        `;
-        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
-        
-        try {
-            const token = await user.getIdToken();
-            const response = await fetch('/api/credits', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) throw new Error("Failed to fetch plan details");
-            const plan = await response.json();
-            updatePlanUI(plan);
-        } catch (error) {
-            console.error("Error fetching plan:", error);
-            if(DOMElements.planStatusBadge) DOMElements.planStatusBadge.textContent = 'Could not load plan.';
-        }
+        DOMElements.authBtn.textContent = 'Sign Out';
     } else {
-        DOMElements.headerNav.innerHTML = `
-            <a href="index.html" class="text-sm font-medium text-gray-700 hover:bg-slate-200 rounded-full px-3 py-1 transition-colors">Generator</a>
-            <button id="sign-in-btn" class="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full px-4 py-1.5 transition-colors">Sign In</button>
-        `;
-        document.getElementById('sign-in-btn').addEventListener('click', signInWithGoogle);
-        updatePlanUI({ name: 'Free' }); // Reset UI for signed out user
+        DOMElements.authBtn.textContent = 'Sign In';
     }
 }
 
-function updatePlanUI(plan) {
-    document.querySelectorAll('.active-plan-badge').forEach(b => b.remove());
-
-    if (plan.name !== 'Free' && DOMElements.planStatusBadge) {
-        let expiryText = '';
-        if (plan.expiry !== 'never') {
-            const expiryDate = new Date(plan.expiry);
-            const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
-            expiryText = daysLeft > 0 ? ` - expires in ${daysLeft} days` : ' - expired';
-        }
-        
-        DOMElements.planStatusBadge.innerHTML = `Current Plan: <span class="font-bold">${plan.name}</span> (${plan.credits} credits remaining${expiryText})`;
-        
-        const activePlanCard = document.getElementById(`plan-${plan.name.toLowerCase()}`);
-        if (activePlanCard) {
-            const badgeContainer = activePlanCard.querySelector('.plan-badge-container');
-            if (badgeContainer) {
-                const badge = document.createElement('div');
-                badge.className = 'active-plan-badge';
-                badge.textContent = 'Active Plan';
-                badgeContainer.innerHTML = ''; 
-                badgeContainer.appendChild(badge);
-            }
-        }
-    } else if (DOMElements.planStatusBadge) {
-        DOMElements.planStatusBadge.innerHTML = ''; // Clear badge if user is on Free plan
+function handleAuthAction() {
+    if (auth.currentUser) {
+        signOut(auth);
+    } else {
+        toggleModal(DOMElements.authModal, true);
     }
 }
 
@@ -173,15 +114,99 @@ function signInWithGoogle() {
         .catch(error => console.error("Authentication Error:", error));
 }
 
+function listenToUserPlan(userId) {
+    const userDocRef = doc(db, 'users', userId);
+    userPlanUnsubscribe = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            const userData = doc.data();
+            updatePlanUI(userData);
+        } else {
+            resetPlanUI();
+        }
+    });
+}
+
+function updatePlanUI(userData) {
+    const { planName, credits, expiryDate } = userData;
+    const plan = planName || 'Free';
+    const badgeText = `Plan: ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
+
+    DOMElements.planBadgeDesktop.textContent = badgeText;
+    DOMElements.planBadgeMobile.textContent = badgeText;
+
+    DOMElements.buyNowBtns.forEach(btn => {
+        const btnPlan = btn.dataset.plan;
+        if (btnPlan === plan.toLowerCase()) {
+            btn.textContent = 'Current Plan';
+            btn.disabled = true;
+            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btn.classList.remove('bg-gray-800', 'bg-blue-500', 'hover:bg-black', 'hover:bg-blue-600');
+        } else {
+            btn.textContent = `Get ${btnPlan.charAt(0).toUpperCase() + btnPlan.slice(1)}`;
+            btn.disabled = false;
+            btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            if (btnPlan === 'create') {
+                 btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            } else {
+                 btn.classList.add('bg-gray-800', 'hover:bg-black');
+            }
+        }
+    });
+
+    // Update expiry countdown
+    updateExpiryCountdown(plan, expiryDate);
+}
+
+function updateExpiryCountdown(plan, expiryDate) {
+    // Clear existing countdowns
+    document.querySelectorAll('.expiry-countdown').forEach(el => el.remove());
+
+    if (expiryDate && (plan === 'inspire' || plan === 'create')) {
+        const expiry = expiryDate.toDate();
+        const now = new Date();
+        const diffTime = expiry - now;
+        
+        if (diffTime > 0) {
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const card = document.querySelector(`[data-plan="${plan}"]`).closest('.pricing-card');
+            if (card) {
+                const countdownEl = document.createElement('p');
+                countdownEl.className = 'expiry-countdown text-xs text-center text-red-500 mt-2 font-semibold';
+                countdownEl.textContent = `Expires in ${diffDays} days`;
+                card.appendChild(countdownEl);
+            }
+        }
+    }
+}
+
+
+function resetPlanUI() {
+    DOMElements.planBadgeDesktop.textContent = 'Plan: Free';
+    DOMElements.planBadgeMobile.textContent = 'Plan: Free';
+    DOMElements.buyNowBtns.forEach(btn => {
+        const plan = btn.dataset.plan;
+        btn.textContent = `Get ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+         if (plan === 'create') {
+            btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        } else {
+            btn.classList.add('bg-gray-800', 'hover:bg-black');
+        }
+    });
+     document.querySelectorAll('.expiry-countdown').forEach(el => el.remove());
+}
+
+
 async function handlePurchase(event) {
+    const clickedButton = event.currentTarget;
+    const plan = clickedButton.dataset.plan;
+
     if (!auth.currentUser) {
         toggleModal(DOMElements.authModal, true);
         return;
     }
 
-    const clickedButton = event.currentTarget;
-    const plan = clickedButton.dataset.plan;
-    
     const originalButtonText = clickedButton.innerHTML;
     clickedButton.disabled = true;
     clickedButton.innerHTML = `<span class="animate-pulse">Processing...</span>`;
@@ -194,7 +219,7 @@ async function handlePurchase(event) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ plan }) // No more isYearly
+            body: JSON.stringify({ plan })
         });
 
         if (!response.ok) {
@@ -207,7 +232,7 @@ async function handlePurchase(event) {
 
     } catch (error) {
         console.error('Payment initiation failed:', error);
-        alert(`Could not start the payment process: ${error.message}. Please try again.`);
+        alert(`Could not start payment: ${error.message}`);
         clickedButton.disabled = false;
         clickedButton.innerHTML = originalButtonText;
     }
@@ -217,14 +242,17 @@ function redirectToPayU(data) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://secure.payu.in/_payment'; 
+
     for (const key in data) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = data[key];
-        form.appendChild(input);
+        if (Object.hasOwnProperty.call(data, key)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = data[key];
+            form.appendChild(input);
+        }
     }
+
     document.body.appendChild(form);
     form.submit();
 }
-
