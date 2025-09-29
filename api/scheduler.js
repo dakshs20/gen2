@@ -1,74 +1,103 @@
-// This is a serverless function designed to be run by a cron job (e.g., daily).
+// This is a serverless function, intended to be run by a cron job.
 import admin from 'firebase-admin';
 
+// --- Initialize Firebase Admin ---
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
-    });
+    try {
+        admin.initializeApp({
+            credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
+        });
+    } catch (error) {
+        console.error("Firebase Admin Initialization Error:", error.stack);
+    }
 }
 const db = admin.firestore();
 
 // --- Plan Data for Credit Allocation ---
 const plans = {
-    create: { credits: 575 },
-    price: { credits: 975 },
-    elevate: { credits: 1950 }
+    hobby: { name: 'Hobby Plan', credits: 575 },
+    create: { name: 'Create Plan', credits: 975 },
+    elevate: { name: 'Elevate Plan', credits: 1950 }
 };
 
 export default async function handler(req, res) {
-    // Optional: Secure this endpoint with a secret key if it's publicly accessible
-    if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    // --- Security Check ---
+    const cronSecret = req.headers.authorization?.split('Bearer ')[1];
+    if (cronSecret !== process.env.CRON_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized.' });
     }
+    
+    console.log("Scheduler starting run...");
+    const now = new Date();
+    let usersProcessed = 0;
 
     try {
-        const today = admin.firestore.Timestamp.now();
-        const usersToCreditQuery = db.collection('users')
-            .where('subscription.status', '==', 'active')
+        // --- Find yearly subscribers due for credits ---
+        const querySnapshot = await db.collection('users')
             .where('subscription.billingCycle', '==', 'yearly')
-            .where('subscription.nextCreditDate', '<=', today);
+            .where('subscription.status', '==', 'active')
+            .where('subscription.nextCreditDate', '<=', admin.firestore.Timestamp.fromDate(now))
+            .get();
 
-        const snapshot = await usersToCreditQuery.get();
-
-        if (snapshot.empty) {
-            console.log("Scheduler run: No users due for yearly credit allocation.");
-            return res.status(200).json({ message: 'No users to credit.' });
+        if (querySnapshot.empty) {
+            console.log("No users due for yearly credit allocation.");
+            return res.status(200).json({ status: 'No users to process.' });
         }
 
-        const promises = [];
-        snapshot.forEach(doc => {
+        // --- Process each due subscriber ---
+        for (const doc of querySnapshot.docs) {
             const user = doc.data();
             const userId = doc.id;
             const planId = user.subscription.planId;
-            const plan = plans[planId];
-
-            if (!plan) {
-                console.error(`Invalid planId '${planId}' for user ${userId}`);
-                return;
-            }
             
-            const allocationAmount = Math.floor(plan.credits / 12);
-            const userRef = db.collection('users').doc(userId);
+            if (!plans[planId]) {
+                console.error(`User ${userId} has an invalid planId: ${planId}. Skipping.`);
+                continue;
+            }
 
-            const nextCreditDate = new Date(user.subscription.nextCreditDate.seconds * 1000);
-            nextCreditDate.setMonth(nextCreditDate.getMonth() + 1);
+            const creditsToAdd = Math.floor(plans[planId].credits / 12);
+            
+            // --- Use a transaction for idempotency and safety ---
+            // The unique key for idempotency is userId + nextCreditDate
+            const nextCreditDate = user.subscription.nextCreditDate.toDate();
+            const idempotencyKey = `${userId}_${nextCreditDate.toISOString()}`;
+            const transactionRef = db.collection('transactions').doc(idempotencyKey);
+            
+            await db.runTransaction(async (t) => {
+                const transactionDoc = await t.get(transactionRef);
+                if (transactionDoc.exists) {
+                    console.log(`Scheduler allocation for ${idempotencyKey} already processed. Skipping.`);
+                    return;
+                }
 
-            const updatePromise = userRef.update({
-                'credits': admin.firestore.FieldValue.increment(allocationAmount),
-                'subscription.nextCreditDate': admin.firestore.Timestamp.fromDate(nextCreditDate)
+                const userRef = db.collection('users').doc(userId);
+                const newNextCreditDate = new Date(nextCreditDate);
+                newNextCreditDate.setMonth(newNextCreditDate.getMonth() + 1);
+
+                // 1. Update user's credits and next credit date
+                t.update(userRef, {
+                    'credits': admin.firestore.FieldValue.increment(creditsToAdd),
+                    'subscription.nextCreditDate': admin.firestore.Timestamp.fromDate(newNextCreditDate)
+                });
+
+                // 2. Log the transaction
+                 t.set(transactionRef, {
+                    userId: userId,
+                    status: 'success',
+                    amount: `+${creditsToAdd} credits`,
+                    type: 'yearly_scheduled_allocation',
+                    processedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
             });
+            usersProcessed++;
+            console.log(`Allocated ${creditsToAdd} credits to user ${userId}.`);
+        }
 
-            promises.push(updatePromise);
-            console.log(`Scheduled credit allocation for user ${userId}. Amount: ${allocationAmount}`);
-        });
-
-        await Promise.all(promises);
-        
-        console.log(`Successfully processed ${promises.length} yearly credit allocations.`);
-        res.status(200).json({ success: true, processedCount: promises.length });
+        res.status(200).json({ status: 'success', usersProcessed });
 
     } catch (error) {
-        console.error("Scheduler run failed:", error);
+        console.error("Scheduler Error:", error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+
