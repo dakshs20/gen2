@@ -1,7 +1,6 @@
 import { auth } from 'firebase-admin';
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK (ensure it's initialized only once)
 if (!admin.apps.length) {
     try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
@@ -15,20 +14,6 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Function to save prompt data for analytics
-async function logGeneration(userId, prompt) {
-    try {
-        await db.collection('generations').add({
-            userId: userId,
-            prompt: prompt,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-    } catch (error) {
-        // We log the error but don't stop the image generation process
-        console.error("Failed to log prompt:", error);
-    }
-}
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -40,50 +25,50 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'User not authenticated.' });
         }
         const user = await auth().verifyIdToken(idToken);
-
+        const userRef = db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
+        
+        if (!userDoc.exists) {
+            return res.status(403).json({ error: 'User profile not found.' });
+        }
+        
+        const userData = userDoc.data();
         const { prompt, imageData, aspectRatio } = req.body;
         
-        // Log the generation attempt
-        if (prompt) {
-            await logGeneration(user.uid, prompt);
+        // Server-side check for credits or free plan
+        if (userData.planName !== 'Free' && userData.credits <= 0) {
+            return res.status(402).json({ error: 'Insufficient credits.' });
+        }
+
+        // Server-side check for expired plans
+        if (userData.expiryDate && userData.expiryDate.toDate() < new Date()) {
+            return res.status(402).json({ error: 'Your plan has expired.' });
         }
 
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
-            return res.status(500).json({ error: "Server configuration error: API key not found." });
+            return res.status(500).json({ error: "API key not found." });
         }
 
         let apiUrl, payload;
+        const generationSpeed = (userData.planName === 'Free' || !userData.planName) ? 30000 : 17000; // 30s for free, 17s for paid
 
-        // --- Intelligent Logic for Image vs. Text Generation ---
-
-        // Case 1: Image-to-Image (imageData is provided)
-        // The model will automatically use the uploaded image's aspect ratio.
         if (imageData && imageData.data) {
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
             payload = {
-                "contents": [{ 
-                    "parts": [
-                        { "text": prompt }, 
-                        { "inlineData": { "mimeType": imageData.mimeType, "data": imageData.data } }
-                    ] 
-                }],
-                "generationConfig": { "responseModalities": ["IMAGE"] }
+                contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: imageData.mimeType, data: imageData.data } }] }],
+                generationConfig: { responseModalities: ["IMAGE"] }
             };
-        } 
-        // Case 2: Text-to-Image (no imageData)
-        // We use the aspect ratio selected by the user, defaulting to '1:1'.
-        else {
+        } else {
             apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-            // Validate the aspect ratio to ensure only allowed values are sent to the API.
-            const validRatios = ["1:1", "16:9", "9:16", "4:5", "128:27"];
-            const selectedRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
-
             payload = { 
                 instances: [{ prompt }], 
-                parameters: { "sampleCount": 1, "aspectRatio": selectedRatio }
+                parameters: { sampleCount: 1, aspectRatio: aspectRatio || "1:1" }
             };
         }
+
+        // Simulate generation delay
+        await new Promise(resolve => setTimeout(resolve, generationSpeed));
 
         const apiResponse = await fetch(apiUrl, {
             method: 'POST',
@@ -105,4 +90,3 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'The API function crashed.', details: error.message });
     }
 }
-
