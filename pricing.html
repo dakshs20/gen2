@@ -3,452 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing - GenArt</title>
-    <meta name="description" content="Explore flexible pricing plans for GenArt AI. Choose the perfect plan to fuel your creativity and generate stunning visuals.">
+    <title>Plans for Every Creator - GenArt</title>
+    <meta name="description" content="Flexible pricing plans for GenArt AI. Choose a monthly or yearly plan and get instant credits to start creating.">
+    <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* slate-50 */
-            scroll-behavior: smooth;
-        }
-
-        /* Animated Gradient Background */
-        #animated-gradient-bg {
-            position: fixed;
-            inset: 0;
-            z-index: -10;
-            background: linear-gradient(125deg, #e0f2fe, #f5f3ff, #f0fdf4, #f5f3ff, #e0f2fe);
-            background-size: 400% 400%;
-            animation: gradient-flow 25s ease-in-out infinite;
-            will-change: background-position;
-        }
-
-        @keyframes gradient-flow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        /* Glassmorphism Effect for Header */
-        header {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(209, 213, 219, 0.3);
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        /* Pricing Toggle Switch */
-        .toggle-switch-bg {
-            transition: background-color 0.3s ease;
-        }
-        .toggle-switch-handle {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        input:checked + .toggle-switch-bg .toggle-switch-handle {
-            transform: translateX(100%);
-        }
-
-        /* Pricing Card Styles & Animations */
-        .pricing-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            will-change: transform, box-shadow;
-        }
-        .pricing-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-        }
-        .popular-badge {
-            background: linear-gradient(45deg, #3b82f6, #818cf8);
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-        }
-        .card-enter-animation {
-            opacity: 0;
-            transform: translateY(40px);
-            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-enter-animation.is-visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Fade-in Animation for Sections */
-        .fade-in-section {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-        }
-        .fade-in-section.is-visible {
-            opacity: 1;
-            transform: translateY(0px);
-        }
-        
-        /* FAQ Accordion */
-        .faq-item summary::-webkit-details-marker {
-            display: none;
-        }
-
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
-<body class="antialiased text-slate-800">
+<body class="bg-slate-50 font-['Inter',_sans-serif] antialiased">
+    <!-- Animated Gradient Background -->
     <div id="animated-gradient-bg"></div>
 
     <!-- Main App Container -->
-    <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-screen">
+    <div id="app-container" class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-screen">
         
-        <header>
-            <div class="relative flex justify-between items-center py-4">
-                <a href="#">
-                     <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-7 w-auto">
-                </a>
-                <nav class="hidden md:flex items-center space-x-8">
-                    <a href="#" class="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">Features</a>
-                    <a href="#" class="text-sm font-semibold text-blue-600">Pricing</a>
-                    <div id="generation-counter" class="text-sm font-medium text-slate-500"></div>
-                </nav>
-                <div class="flex items-center space-x-4">
-                    <button id="auth-btn" class="hidden md:inline-block text-sm font-semibold border-2 border-blue-500 text-blue-500 px-5 py-2 rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300">
-                        Sign In
-                    </button>
-                    <button id="mobile-menu-btn" class="md:hidden p-2 rounded-md text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
-                </div>
+        <header class="relative flex justify-between items-center py-5">
+             <a href="index.html">
+                 <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo" class="h-7 w-auto">
+            </a>
+            <div id="header-auth-section" class="hidden md:flex items-center space-x-6">
+                <a href="dashboard.html" class="text-sm font-medium text-slate-700 hover:text-slate-900">Dashboard</a>
+                <div id="generation-counter" class="text-sm font-medium text-slate-500"></div>
+                <button id="auth-btn" class="text-sm font-medium border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                    Sign In
+                </button>
             </div>
-            <!-- Mobile Menu -->
-            <div id="mobile-menu" class="hidden md:hidden absolute top-full right-0 mt-2 w-full bg-white/80 backdrop-blur-lg rounded-lg shadow-xl z-50 border border-slate-200">
-                <div class="p-4 space-y-3">
-                    <a href="#" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">Features</a>
-                    <a href="#" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">Pricing</a>
-                    <div class="border-t my-1"></div>
-                    <div id="mobile-generation-counter" class="px-4 py-2 text-sm text-center text-slate-600"></div>
-                    <button id="mobile-auth-btn" class="w-full text-center px-4 py-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 rounded-full">
+            <div class="md:hidden">
+                <button id="mobile-menu-btn" class="p-2 rounded-md text-slate-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50 border border-slate-200">
+                <div class="p-2">
+                    <a href="dashboard.html" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">Dashboard</a>
+                    <div class="border-t my-1 border-slate-200"></div>
+                    <div id="mobile-generation-counter" class="px-2 py-2 text-sm text-center text-slate-600"></div>
+                    <button id="mobile-auth-btn" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">
                         Sign In
                     </button>
                 </div>
             </div>
         </header>
 
-        <main class="flex-grow flex flex-col items-center pt-16 sm:pt-24">
-            <!-- Hero Section -->
-            <section class="text-center w-full max-w-4xl mx-auto fade-in-section">
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
-                    Find the Perfect Plan
-                </h1>
-                <p class="text-lg md:text-xl text-slate-600 mb-10">
-                    Fuel your creativity. Purchase credits and continue creating with our advanced AI.
-                </p>
-                <div class="flex items-center justify-center space-x-4 mb-16">
-                    <span class="font-semibold text-slate-600">Monthly</span>
+        <main class="flex-grow flex flex-col items-center justify-center text-center py-16 sm:py-24">
+            <div class="w-full max-w-4xl">
+                <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">Plans for every creator</h1>
+                <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Credits fuel your creations, with an average generation speed of 17 seconds. Yearly plans offer the best value.</p>
+                
+                <!-- Billing Toggle -->
+                <div class="mt-10 flex justify-center items-center space-x-4">
+                    <span class="text-sm font-semibold text-slate-800">Monthly</span>
                     <label for="billing-toggle" class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="billing-toggle" class="sr-only peer">
-                        <div class="w-14 h-8 bg-slate-200 rounded-full toggle-switch-bg peer-checked:bg-blue-600">
-                            <div class="absolute top-1 left-1 bg-white border border-slate-200 rounded-full h-6 w-6 toggle-switch-handle peer-checked:border-blue-600"></div>
-                        </div>
+                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
-                    <span class="font-semibold text-slate-600 flex items-center">
+                    <span class="text-sm font-semibold text-slate-800">
                         Yearly
-                        <span class="ml-2 bg-green-100 text-green-800 text-xs font-bold px-2.5 py-1 rounded-full">Save 25%</span>
+                        <span class="ml-1 text-xs font-bold text-emerald-500 bg-emerald-100 px-2 py-0.5 rounded-full">Save 15%</span>
                     </span>
                 </div>
-            </section>
+                <p class="mt-2 text-xs text-slate-500">Toggle billing: Monthly or Yearly (billed once). Yearly purchases distribute credits monthly over 12 months.</p>
 
-            <!-- Pricing Cards -->
-            <section class="w-full">
-                <div id="pricing-cards-container" class="grid lg:grid-cols-3 gap-8 text-left max-w-6xl mx-auto">
-                    <!-- Pricing Card 1: Hobby -->
-                    <div class="pricing-card card-enter-animation bg-white/80 backdrop-blur-md p-8 rounded-2xl border border-slate-200/80 shadow-lg flex flex-col">
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Hobby</h2>
-                        <div class="flex items-baseline gap-2 mb-6">
-                            <p class="text-4xl font-extrabold text-slate-900 price" data-monthly="149" data-yearly="1299">₹149</p>
-                            <span class="text-slate-500 billing-cycle">/month</span>
-                        </div>
-                        <p class="text-slate-500 mb-6 font-semibold"><span class="credits">600</span> Credits/month</p>
-                        <ul class="space-y-3 text-slate-600 flex-grow mb-8">
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Standard Image Quality</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Personal Use License</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Community Support</li>
-                        </ul>
-                        <button class="buy-now-btn w-full bg-slate-800 text-white font-semibold py-3 rounded-lg hover:bg-black transition-colors" data-plan="hobby">Choose Plan</button>
-                    </div>
-
-                    <!-- Pricing Card 2: Pro -->
-                    <div class="pricing-card card-enter-animation bg-white/80 backdrop-blur-md p-8 rounded-2xl border-2 border-blue-500 shadow-xl flex flex-col relative overflow-hidden" style="transition-delay: 150ms;">
-                        <div class="popular-badge absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-4 py-1.5 rounded-full">MOST POPULAR</div>
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Pro</h2>
-                        <div class="flex items-baseline gap-2 mb-6">
-                            <p class="text-4xl font-extrabold text-slate-900 price" data-monthly="499" data-yearly="4499">₹499</p>
-                             <span class="text-slate-500 billing-cycle">/month</span>
-                        </div>
-                        <p class="text-slate-500 mb-6 font-semibold"><span class="credits">1200</span> Credits/month</p>
-                         <ul class="space-y-3 text-slate-600 flex-grow mb-8">
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>High Image Quality</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Commercial Use License</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Priority Support</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Access to Beta Features</li>
-                        </ul>
-                        <button class="buy-now-btn w-full bg-blue-500 text-white font-semibold py-3 rounded-lg hover:bg-blue-600 transition-colors" data-plan="pro">Choose Plan</button>
-                    </div>
-
-                    <!-- Pricing Card 3: Mega -->
-                     <div class="pricing-card card-enter-animation bg-white/80 backdrop-blur-md p-8 rounded-2xl border border-slate-200/80 shadow-lg flex flex-col" style="transition-delay: 300ms;">
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Mega</h2>
-                        <div class="flex items-baseline gap-2 mb-6">
-                            <p class="text-4xl font-extrabold text-slate-900 price" data-monthly="999" data-yearly="8999">₹999</p>
-                             <span class="text-slate-500 billing-cycle">/month</span>
-                        </div>
-                        <p class="text-slate-500 mb-6 font-semibold"><span class="credits">4000</span> Credits/month</p>
-                         <ul class="space-y-3 text-slate-600 flex-grow mb-8">
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Highest Image Quality</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Full Commercial License</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Dedicated Support Agent</li>
-                           <li class="flex items-center"><svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Custom Model Training</li>
-                        </ul>
-                        <button class="buy-now-btn w-full bg-slate-800 text-white font-semibold py-3 rounded-lg hover:bg-black transition-colors" data-plan="mega">Choose Plan</button>
-                    </div>
+                <!-- Pricing Grid -->
+                <div id="pricing-grid" class="mt-12 grid md:grid-cols-3 gap-8 text-left">
+                    <!-- Plan Cards will be dynamically inserted here by pricing.js -->
                 </div>
-            </section>
-            
-            <!-- FAQ Section -->
-            <section class="w-full max-w-4xl mx-auto mt-24 sm:mt-32 fade-in-section">
-                <h2 class="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
-                <div class="space-y-4">
-                    <details class="faq-item group bg-white/60 p-6 rounded-lg" open>
-                        <summary class="flex items-center justify-between font-semibold cursor-pointer">
-                            What are credits and how are they used?
-                            <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <p class="mt-4 text-slate-600">
-                            Credits are used to generate images. Typically, one standard image generation costs one credit. Higher resolution or more complex generations might use more credits. Your credits reset at the start of each billing cycle.
-                        </p>
-                    </details>
-                    <details class="faq-item group bg-white/60 p-6 rounded-lg">
-                        <summary class="flex items-center justify-between font-semibold cursor-pointer">
-                            Can I cancel my subscription anytime?
-                             <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <p class="mt-4 text-slate-600">
-                           Yes, you can cancel your subscription at any time from your account dashboard. Your plan will remain active until the end of the current billing period, and you won't be charged again.
-                        </p>
-                    </details>
-                     <details class="faq-item group bg-white/60 p-6 rounded-lg">
-                        <summary class="flex items-center justify-between font-semibold cursor-pointer">
-                            What happens if I run out of credits?
-                             <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </summary>
-                        <p class="mt-4 text-slate-600">
-                           If you run out of credits, you can upgrade to a higher plan to get more credits immediately, or you can purchase a one-time credit top-up pack. Otherwise, your credits will be replenished at the start of your next billing cycle.
-                        </p>
-                    </details>
-                </div>
-            </section>
+            </div>
         </main>
-
-        <footer class="text-center py-12 mt-24 border-t border-slate-200">
-            <p class="text-sm text-slate-500">&copy; 2025 GenArt. All rights reserved.</p>
-             <a href="#" class="text-sm text-slate-500 hover:text-slate-800 mt-2 inline-block">Privacy Policy</a>
-        </footer>
     </div>
 
     <!-- Sign In Modal -->
     <div id="auth-modal" aria-hidden="true" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center relative transform opacity-0 -translate-y-8 transition-all duration-300">
-            <button id="close-modal-btn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Sign In Required</h2>
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+            <h2 class="text-2xl font-semibold text-slate-800 mb-2">Sign In Required</h2>
             <p class="text-slate-500 mb-6">Please sign in to choose a plan.</p>
-            <button id="google-signin-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 flex items-center justify-center space-x-2 transition-colors">
-                <svg class="w-5 h-5" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4,12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20s20-8.955,20-20c0-2.569-.49-5.025-1.389-7.239z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4,16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083L43.59,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.089,5.571l6.19,5.238C41.38,36.16,44,30.638,44,24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
-                <span>Sign In with Google</span>
+            <button id="google-signin-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 flex items-center justify-center space-x-2 transition-colors">
+                 <span>Sign In with Google</span>
             </button>
+            <button class="close-modal-btn mt-4 text-sm text-slate-500 hover:text-slate-700">Cancel</button>
         </div>
     </div>
     
-    <script type="module">
-        // --- Firebase and Auth Initialization ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
-        // IMPORTANT: Replace with your actual Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCcSkzSdz_GtjYQBV5sTUuPxu1BwTZAq7Y",
-            authDomain: "genart-a693a.firebaseapp.com",
-            projectId: "genart-a693a",
-            storageBucket: "genart-a693a.appspot.com",
-            messagingSenderId: "96958671615",
-            appId: "1:96958671615:web:6a0d3aa6bf42c6bda17aca",
-            measurementId: "G-EDCW8VYXY6"
-        };
+    <!-- Checkout Summary Modal -->
+    <div id="checkout-modal" aria-hidden="true" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 invisible">
+        <div id="checkout-modal-content" class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-left transition-transform duration-300 scale-95">
+             <!-- Modal content will be dynamically inserted here -->
+        </div>
+    </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
-        document.addEventListener('DOMContentLoaded', () => {
-            
-            // --- DOM Element Caching ---
-            const DOMElements = {
-                authBtn: document.getElementById('auth-btn'),
-                mobileAuthBtn: document.getElementById('mobile-auth-btn'),
-                authModal: document.getElementById('auth-modal'),
-                authModalContent: document.querySelector('#auth-modal > div'),
-                googleSignInBtn: document.getElementById('google-signin-btn'),
-                closeModalBtn: document.getElementById('close-modal-btn'),
-                generationCounter: document.getElementById('generation-counter'),
-                mobileGenerationCounter: document.getElementById('mobile-generation-counter'),
-                buyNowBtns: document.querySelectorAll('.buy-now-btn'),
-                mobileMenuBtn: document.getElementById('mobile-menu-btn'),
-                mobileMenu: document.getElementById('mobile-menu'),
-                billingToggle: document.getElementById('billing-toggle'),
-                pricingCards: document.querySelectorAll('.price'),
-                billingCycles: document.querySelectorAll('.billing-cycle'),
-                creditAmounts: document.querySelectorAll('.credits'),
-            };
-
-            // --- Event Listeners ---
-            onAuthStateChanged(auth, user => updateUIForAuthState(user));
-
-            [DOMElements.authBtn, DOMElements.mobileAuthBtn].forEach(btn => btn?.addEventListener('click', handleAuthAction));
-            DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-            DOMElements.closeModalBtn?.addEventListener('click', () => toggleModal(false));
-            DOMElements.mobileMenuBtn?.addEventListener('click', () => DOMElements.mobileMenu.classList.toggle('hidden'));
-            DOMElements.billingToggle?.addEventListener('change', updatePricing);
-
-            DOMElements.buyNowBtns.forEach(btn => {
-                btn.addEventListener('click', (event) => handlePurchase(event));
-            });
-            
-            // --- Intersection Observer for Animations ---
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            document.querySelectorAll('.fade-in-section, .card-enter-animation').forEach(el => {
-                observer.observe(el);
-            });
-
-
-            // --- Core Logic ---
-            function toggleModal(show) {
-                if (show) {
-                    DOMElements.authModal.classList.remove('invisible');
-                    DOMElements.authModal.classList.add('opacity-100');
-                    DOMElements.authModalContent.classList.remove('opacity-0', '-translate-y-8');
-                } else {
-                    DOMElements.authModal.classList.remove('opacity-100');
-                    DOMElements.authModal.classList.add('invisible');
-                    DOMElements.authModalContent.classList.add('opacity-0', '-translate-y-8');
-                }
-            }
-            
-            function updateUIForAuthState(user) {
-                if (user) {
-                    DOMElements.authBtn.textContent = 'Sign Out';
-                    DOMElements.mobileAuthBtn.textContent = 'Sign Out';
-                    // Mock credit fetching
-                    DOMElements.generationCounter.textContent = `Credits: 150`;
-                    DOMElements.mobileGenerationCounter.textContent = `Credits: 150`;
-                } else {
-                    DOMElements.authBtn.textContent = 'Sign In';
-                    DOMElements.mobileAuthBtn.textContent = 'Sign In';
-                    DOMElements.generationCounter.textContent = '';
-                    DOMElements.mobileGenerationCounter.textContent = 'Sign in for credits';
-                }
-            }
-
-            function handleAuthAction() {
-                if (auth.currentUser) {
-                    signOut(auth);
-                } else {
-                    toggleModal(true);
-                }
-            }
-
-            function signInWithGoogle() {
-                signInWithPopup(auth, provider)
-                    .then(() => toggleModal(false))
-                    .catch(error => {
-                        console.error("Authentication Error:", error);
-                        // Using a custom message box instead of alert
-                        showCustomMessage("Failed to sign in. Please try again.");
-                    });
-            }
-
-            function updatePricing() {
-                const isYearly = DOMElements.billingToggle.checked;
-                
-                DOMElements.pricingCards.forEach(priceEl => {
-                    const monthlyPrice = priceEl.dataset.monthly;
-                    const yearlyPrice = priceEl.dataset.yearly;
-                    priceEl.textContent = isYearly ? `₹${yearlyPrice}` : `₹${monthlyPrice}`;
-                });
-                
-                DOMElements.billingCycles.forEach(cycleEl => {
-                    cycleEl.textContent = isYearly ? '/year' : '/month';
-                });
-                
-                DOMElements.creditAmounts.forEach(creditEl => {
-                   // Example: If yearly, show total credits for the year
-                   const monthlyCredits = parseInt(creditEl.parentElement.querySelector('.credits').textContent);
-                   // You can adjust this logic if credits are also different for yearly plans
-                   // For now, it just changes the cycle text
-                });
-            }
-
-            async function handlePurchase(event) {
-                if (!auth.currentUser) {
-                    toggleModal(true);
-                    return;
-                }
-                const btn = event.currentTarget;
-                const originalText = btn.innerHTML;
-                btn.innerHTML = `<span class="animate-pulse">Processing...</span>`;
-                btn.disabled = true;
-
-                // Simulate payment processing
-                setTimeout(() => {
-                    showCustomMessage(`Thank you for choosing the ${btn.dataset.plan} plan!`);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }, 2000);
-            }
-
-            function showCustomMessage(message) {
-                const messageBox = document.createElement('div');
-                messageBox.textContent = message;
-                messageBox.className = 'fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-out';
-                document.body.appendChild(messageBox);
-                setTimeout(() => {
-                    messageBox.remove();
-                }, 3000);
-            }
-            
-            // Add a small CSS animation for the message box
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fade-in-out {
-                    0% { opacity: 0; transform: translateY(-20px); }
-                    10% { opacity: 1; transform: translateY(0); }
-                    90% { opacity: 1; transform: translateY(0); }
-                    100% { opacity: 0; transform: translateY(-20px); }
-                }
-                .animate-fade-in-out {
-                    animation: fade-in-out 3s ease;
-                }
-            `;
-            document.head.appendChild(style);
-
-        });
-    </script>
+    <script type="module" src="pricing.js"></script>
 </body>
 </html>
