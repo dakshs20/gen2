@@ -88,53 +88,16 @@
         .subtext {
             font-size: clamp(1rem, 2.5vw, 1.1rem);
             color: var(--text-secondary-color);
-            margin-top: 1.5rem;
+            margin-top: 2.5rem;
             line-height: 1.6;
             font-weight: 400;
             transition: opacity 0.4s ease;
-            animation-delay: 0.9s;
+            animation-delay: 0.7s;
         }
         .content-wrapper:hover .subtext {
             opacity: 0.8;
         }
         
-        .countdown-timer {
-            margin-top: 3rem;
-            display: flex;
-            justify-content: center;
-            gap: clamp(1rem, 4vw, 2.5rem);
-            font-family: 'Roboto Mono', monospace;
-            animation-delay: 0.7s;
-        }
-
-        .time-segment {
-            perspective: 1000px;
-        }
-
-        .time-digit {
-            font-size: clamp(2rem, 8vw, 3.5rem);
-            font-weight: 400;
-            line-height: 1;
-        }
-
-        .digit-update-animation {
-             animation: smoothFadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        @keyframes smoothFadeUp {
-            from { transform: translateY(15px); opacity: 0; }
-            to   { transform: translateY(0px); opacity: 1; }
-        }
-
-        .time-label {
-            font-family: 'Inter', sans-serif;
-            font-weight: 400;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-secondary-color);
-            margin-top: 0.75rem;
-        }
     </style>
 </head>
 <body>
@@ -142,77 +105,12 @@
         <canvas id="particle-canvas"></canvas>
         <div class="content-wrapper">
             <h1 class="main-line animated-item">We’ve gone off-grid to create what the world isn’t ready for.</h1>
-            <div id="countdown-timer" class="countdown-timer animated-item">
-                <div class="time-segment">
-                    <span id="days" class="time-digit">00</span>
-                    <div class="time-label">Days</div>
-                </div>
-                <div class="time-segment">
-                    <span id="hours" class="time-digit">00</span>
-                    <div class="time-label">Hours</div>
-                </div>
-                <div class="time-segment">
-                    <span id="minutes" class="time-digit">00</span>
-                    <div class="time-label">Minutes</div>
-                </div>
-                 <div class="time-segment">
-                    <span id="seconds" class="time-digit">00</span>
-                    <div class="time-label">Seconds</div>
-                </div>
-            </div>
-             <p class="subtext animated-item">Our website will be back online soon. What’s coming will change everything.</p>
+            <p class="subtext animated-item">Our website will be back online soon. What’s coming will change everything.</p>
         </div>
     </section>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Elements ---
-            const daysEl = document.getElementById('days');
-            const hoursEl = document.getElementById('hours');
-            const minutesEl = document.getElementById('minutes');
-            const secondsEl = document.getElementById('seconds');
-            
-            // --- Universal Countdown Timer Logic ---
-
-            // THIS IS THE OFFICIAL LAUNCH TIME.
-            // It is set to a fixed point in the future.
-            // This timer will be the exact same for every user, on every device,
-            // and will NOT reset on refresh. This is the one, universal countdown.
-            const countdownEndTime = new Date('2025-10-01T11:48:00+05:30').getTime();
-
-
-            const updateDigit = (element, value) => {
-                const formattedValue = value.toString().padStart(2, '0');
-                if (element.textContent !== formattedValue) {
-                    element.textContent = formattedValue;
-                    element.classList.add('digit-update-animation');
-                    setTimeout(() => element.classList.remove('digit-update-animation'), 800);
-                }
-            };
-            
-            const updateCountdown = () => {
-                const now = new Date().getTime();
-                const distance = countdownEndTime - now;
-
-                if (distance < 0) {
-                    clearInterval(countdownInterval);
-                    document.getElementById('countdown-timer').innerHTML = "<div class='text-xl font-bold' style='font-family: \"Inter\", sans-serif;'>Reality has caught up.</div>";
-                    return;
-                }
-                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const s = Math.floor((distance % (1000 * 60)) / 1000);
-            
-                updateDigit(daysEl, d);
-                updateDigit(hoursEl, h);
-                updateDigit(minutesEl, m);
-                updateDigit(secondsEl, s);
-            };
-            
-            const countdownInterval = setInterval(updateCountdown, 1000);
-            updateCountdown();
-
             // --- Interactive Connected Particle Background ---
             const canvas = document.getElementById('particle-canvas');
             const ctx = canvas.getContext('2d');
