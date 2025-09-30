@@ -144,19 +144,19 @@
             <h1 class="main-line animated-item">We’ve gone off-grid to create what the world isn’t ready for.</h1>
             <div id="countdown-timer" class="countdown-timer animated-item">
                 <div class="time-segment">
-                    <span id="days" class="time-digit">--</span>
+                    <span id="days" class="time-digit">00</span>
                     <div class="time-label">Days</div>
                 </div>
                 <div class="time-segment">
-                    <span id="hours" class="time-digit">--</span>
+                    <span id="hours" class="time-digit">00</span>
                     <div class="time-label">Hours</div>
                 </div>
                 <div class="time-segment">
-                    <span id="minutes" class="time-digit">--</span>
+                    <span id="minutes" class="time-digit">00</span>
                     <div class="time-label">Minutes</div>
                 </div>
                  <div class="time-segment">
-                    <span id="seconds" class="time-digit">--</span>
+                    <span id="seconds" class="time-digit">00</span>
                     <div class="time-label">Seconds</div>
                 </div>
             </div>
@@ -164,100 +164,54 @@
         </div>
     </section>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        document.addEventListener('DOMContentLoaded', async function() {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
             // --- Elements ---
             const daysEl = document.getElementById('days');
             const hoursEl = document.getElementById('hours');
             const minutesEl = document.getElementById('minutes');
             const secondsEl = document.getElementById('seconds');
-            let countdownInterval;
-
-            // --- Firebase Initialization ---
-            let db;
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                db = getFirestore(app);
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                console.log("Firebase initialized and user signed in.");
-                initializeCountdown();
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                document.getElementById('countdown-timer').innerHTML = "<div class='text-lg text-red-500'>Error loading timer.</div>";
-            }
-
-            // --- Countdown Timer Logic ---
-            async function initializeCountdown() {
-                const timerDocRef = doc(db, `/artifacts/${appId}/public/data/countdown/timerConfig`);
-                try {
-                    const docSnap = await getDoc(timerDocRef);
-                    let countdownEndTime;
-
-                    if (docSnap.exists()) {
-                        // Use the end time from the database
-                        countdownEndTime = docSnap.data().endTime;
-                    } else {
-                        // First visit: set the end time and save it
-                        countdownEndTime = new Date().getTime() + 24 * 60 * 60 * 1000;
-                        await setDoc(timerDocRef, { endTime: countdownEndTime });
-                        console.log("Countdown end time set for the first time.");
-                    }
-                    
-                    startTimer(countdownEndTime);
-
-                } catch (error) {
-                    console.error("Error getting or setting timer config:", error);
-                    document.getElementById('countdown-timer').innerHTML = "<div class='text-lg text-red-500'>Could not sync timer.</div>";
-                }
-            }
-
-            function startTimer(endTime) {
-                const updateDigit = (element, value) => {
-                    const formattedValue = value.toString().padStart(2, '0');
-                    if (element.textContent !== formattedValue) {
-                        element.textContent = formattedValue;
-                        element.classList.add('digit-update-animation');
-                        setTimeout(() => element.classList.remove('digit-update-animation'), 800);
-                    }
-                };
             
-                const updateCountdown = () => {
-                    const now = new Date().getTime();
-                    const distance = endTime - now;
+            // --- Universal Countdown Timer Logic ---
+            // This is the single, fixed end-time for ALL users.
+            // I have set it to start a 24-hour countdown from now.
+            // You can change 'YYYY-MM-DDTHH:MM:SS' to your specific launch time.
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 1); // Set target for 24 hours from now
+            const countdownEndTime = futureDate.getTime();
 
-                    if (distance < 0) {
-                        clearInterval(countdownInterval);
-                        document.getElementById('countdown-timer').innerHTML = "<div class='text-xl font-bold' style='font-family: \"Inter\", sans-serif;'>Reality has caught up.</div>";
-                        return;
-                    }
-                    const d = Math.floor(distance / (1000 * 60 * 60 * 24));
-                    const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    const s = Math.floor((distance % (1000 * 60)) / 1000);
-                
-                    updateDigit(daysEl, d);
-                    updateDigit(hoursEl, h);
-                    updateDigit(minutesEl, m);
-                    updateDigit(secondsEl, s);
-                };
-                
-                if(countdownInterval) clearInterval(countdownInterval);
-                countdownInterval = setInterval(updateCountdown, 1000);
-                updateCountdown();
-            }
+
+            const updateDigit = (element, value) => {
+                const formattedValue = value.toString().padStart(2, '0');
+                if (element.textContent !== formattedValue) {
+                    element.textContent = formattedValue;
+                    element.classList.add('digit-update-animation');
+                    setTimeout(() => element.classList.remove('digit-update-animation'), 800);
+                }
+            };
+            
+            const updateCountdown = () => {
+                const now = new Date().getTime();
+                const distance = countdownEndTime - now;
+
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('countdown-timer').innerHTML = "<div class='text-xl font-bold' style='font-family: \"Inter\", sans-serif;'>Reality has caught up.</div>";
+                    return;
+                }
+                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((distance % (1000 * 60)) / 1000);
+            
+                updateDigit(daysEl, d);
+                updateDigit(hoursEl, h);
+                updateDigit(minutesEl, m);
+                updateDigit(secondsEl, s);
+            };
+            
+            const countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
 
             // --- Interactive Connected Particle Background ---
             const canvas = document.getElementById('particle-canvas');
