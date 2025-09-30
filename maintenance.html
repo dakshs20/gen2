@@ -174,12 +174,11 @@
             
             // --- Universal Countdown Timer Logic ---
 
-            // THIS IS THE MOST IMPORTANT LINE
-            // It sets ONE single, universal launch time for EVERYONE.
-            // The timer is always counting down to this exact moment.
-            // I have set it to be exactly 24 hours from when this code was generated.
-            // It will NOT reset when you refresh or when a new user visits.
-            const countdownEndTime = new Date('2025-10-01T11:23:00+05:30').getTime();
+            // THIS IS THE OFFICIAL LAUNCH TIME.
+            // It is set to a fixed point in the future.
+            // This timer will be the exact same for every user, on every device,
+            // and will NOT reset on refresh. This is the one, universal countdown.
+            const countdownEndTime = new Date('2025-10-01T11:48:00+05:30').getTime();
 
 
             const updateDigit = (element, value) => {
