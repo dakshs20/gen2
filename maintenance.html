@@ -43,12 +43,13 @@
         #particle-canvas {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0;
+            z-index: -1;
         }
         
         /* Glassmorphism content container */
         .content-wrapper {
             max-width: 900px;
+            width: 100%;
             position: relative;
             z-index: 1;
             background: var(--container-bg);
@@ -58,6 +59,7 @@
             border-radius: 1.5rem;
             padding: clamp(2rem, 8vw, 4rem);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
             animation: float 10s ease-in-out infinite;
         }
         
@@ -67,14 +69,10 @@
             100% { transform: translateY(0px); }
         }
         
-        .animated-item {
-             animation: floatIn 1.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
-             opacity: 0;
-             transform: translateY(30px);
-        }
-
-        @keyframes floatIn {
-            to { opacity: 1; transform: translateY(0); }
+        #intro-content {
+            transition: opacity 0.4s ease-out, transform 0.5s ease-out, visibility 0.5s;
+            visibility: visible;
+            opacity: 1;
         }
 
         .main-line {
@@ -82,7 +80,18 @@
             font-weight: 600;
             letter-spacing: -0.025em;
             line-height: 1.2;
-            animation-delay: 0.5s;
+        }
+        
+        .main-line .char-reveal {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(25px);
+            animation: reveal 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .main-line:hover .char-reveal {
+             transform: translateY(-5px) scale(1.1);
         }
 
         .subtext {
@@ -91,11 +100,122 @@
             margin-top: 2.5rem;
             line-height: 1.6;
             font-weight: 400;
-            transition: opacity 0.4s ease;
-            animation-delay: 0.7s;
         }
-        .content-wrapper:hover .subtext {
-            opacity: 0.8;
+        
+        .subtext .word-reveal-wrapper {
+             display: inline-block;
+             overflow: hidden;
+        }
+        .subtext .word-reveal {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(100%);
+            animation: reveal 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+
+        @keyframes reveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        #logo-container {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: reveal 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            animation-delay: 0.2s;
+        }
+
+        #logo-container img {
+            max-height: 40px;
+            margin: 0 auto;
+        }
+
+        #game-container {
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.6s ease-in, visibility 0.6s;
+            position: absolute;
+            top: 0; left:0; width: 100%;
+            padding: 1rem;
+            visibility: hidden;
+        }
+
+        #game-canvas {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 1rem;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        #game-prompt {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary-color);
+            cursor: pointer;
+            opacity: 0;
+            animation: reveal 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            animation-delay: 1.5s;
+            transition: all 0.3s;
+        }
+        #game-prompt:hover {
+            color: var(--text-primary-color);
+            transform: scale(1.05);
+        }
+        
+        #game-ui {
+            position: absolute;
+            top: 1.5rem;
+            left: 2rem;
+            right: 2rem;
+            display: flex;
+            justify-content: flex-end;
+            color: var(--text-primary-color);
+            font-family: 'Roboto Mono', monospace;
+            pointer-events: none;
+        }
+        
+        #game-over-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-primary-color);
+            font-weight: 600;
+            font-size: clamp(1.2rem, 5vw, 1.5rem);
+            pointer-events: none;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+         #game-over-message span {
+            font-size: clamp(0.8rem, 3vw, 0.9rem);
+            font-weight: 400;
+            color: var(--text-secondary-color);
+         }
+
+        /* Game Active State */
+        .content-wrapper.game-active {
+            padding: 0;
+            max-width: 800px;
+            width: 90vw;
+            height: 60vh;
+            max-height: 400px;
+        }
+        .content-wrapper.game-active #intro-content {
+            opacity: 0;
+            transform: scale(0.9);
+            visibility: hidden;
+        }
+        .content-wrapper.game-active #game-container {
+            opacity: 1;
+            visibility: visible;
         }
         
     </style>
@@ -104,119 +224,220 @@
     <section id="maintenance-section">
         <canvas id="particle-canvas"></canvas>
         <div class="content-wrapper">
-            <h1 class="main-line animated-item">We’ve gone off-grid to create what the world isn’t ready for.</h1>
-            <p class="subtext animated-item">Our website will be back online soon. What’s coming will change everything.</p>
+            <div id="intro-content">
+                <div id="logo-container">
+                    <img src="https://iili.io/FsAoG2I.md.png" alt="GenArt Logo">
+                </div>
+                <h1 class="main-line">We’ve gone off-grid to create what the world isn’t ready for.</h1>
+                <p class="subtext">Our website will be back online soon. What’s coming will change everything.</p>
+                <div id="game-prompt">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-controller" viewBox="0 0 16 16">
+                        <path d="M11.5 6.027a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm2.5-.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm-6.5-3h1v1h1v1h-1v1h-1v-1h-1v-1h1v-1z"/>
+                        <path d="M3.051 3.27a.5.5 0 0 1 .354-.613l1.932-.518a.5.5 0 0 1 .62.39c.655-.079 1.35-.117 2.043-.117s1.388.038 2.043.117a.5.5 0 0 1 .62-.39l1.932.518a.5.5 0 0 1 .354.613l-.518 1.932a.5.5 0 0 1-.613.354c-.18.044-.363.078-.548.106-.18.028-.36.05-.54.068a.5.5 0 0 1-.497-.497l-.006-.027c-.038-.17-.06-.34-.06-.517s.022-.347.06-.517l.006-.027a.5.5 0 0 1 .497-.497c.18-.018.36-.04.54-.068.185-.028.368-.062.548-.106l.518-1.932L12.45 3.61a.5.5 0 0 1-.39.62l-.518 1.932c-.18.675-1.043 1.15-1.996 1.15s-1.816-.475-1.996-1.15l-.518-1.932a.5.5 0 0 1-.39-.62l.518-1.932L3.05 3.27zM12.95 12.73a.5.5 0 0 1-.354.613l-1.932.518a.5.5 0 0 1-.62-.39c-.655.079-1.35.117-2.043.117s-1.388-.038-2.043-.117a.5.5 0 0 1-.62.39l-1.932-.518a.5.5 0 0 1-.354-.613l.518-1.932a.5.5 0 0 1 .613-.354c.18-.044.363.078.548-.106.18-.028.36-.05.54-.068a.5.5 0 0 1 .497.497l.006.027c.038.17.06.34.06.517s-.022.347-.06.517l-.006.027a.5.5 0 0 1-.497.497c-.18.018-.36.04-.54.068-.185.028-.368.062-.548-.106l-.518 1.932 1.932.518a.5.5 0 0 1 .39-.62l.518-1.932c.18-.675 1.043-1.15 1.996-1.15s1.816.475 1.996 1.15l.518 1.932a.5.5 0 0 1 .39.62l-1.932-.518z"/>
+                    </svg>
+                    <span>Play Circuit Jumper</span>
+                </div>
+            </div>
+            
+            <div id="game-container">
+                <canvas id="game-canvas"></canvas>
+                <div id="game-ui">
+                    <div id="score-display">Score: 0</div>
+                </div>
+                <div id="game-over-message">
+                    GAME OVER
+                    <span>Click to Restart</span>
+                </div>
+            </div>
+
         </div>
     </section>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Interactive Connected Particle Background ---
-            const canvas = document.getElementById('particle-canvas');
-            const ctx = canvas.getContext('2d');
-            let particlesArray;
+            // --- Animate Text On Load ---
+            function animateText() {
+                const headline = document.querySelector('.main-line');
+                const subtext = document.querySelector('.subtext');
+                const headlineText = headline.textContent;
+                headline.innerHTML = '';
+                headlineText.split('').forEach((char, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = char === ' ' ? '\u00A0' : char;
+                    span.style.animationDelay = `${0.5 + index * 0.025}s`;
+                    span.classList.add('char-reveal');
+                    headline.appendChild(span);
+                });
 
+                const subtextWords = subtext.textContent.split(' ');
+                subtext.innerHTML = '';
+                subtextWords.forEach((word, index) => {
+                    const wordWrapper = document.createElement('span');
+                    wordWrapper.classList.add('word-reveal-wrapper');
+                    const span = document.createElement('span');
+                    span.textContent = word;
+                    span.style.animationDelay = `${1.2 + index * 0.05}s`;
+                    span.classList.add('word-reveal');
+                    wordWrapper.appendChild(span);
+                    subtext.appendChild(wordWrapper);
+                    subtext.append(' ');
+                });
+            }
+            animateText();
+
+            // --- Circuit Jumper Game Logic ---
+            const gamePrompt = document.getElementById('game-prompt');
+            const gameCanvas = document.getElementById('game-canvas');
+            const contentWrapper = document.querySelector('.content-wrapper');
+            const gctx = gameCanvas.getContext('2d');
+            const scoreDisplay = document.getElementById('score-display');
+            const gameOverMessage = document.getElementById('game-over-message');
+
+            let player, gravity, obstacles, gameSpeed, score, gameOver;
+            
+            function startGame() {
+                gameCanvas.width = contentWrapper.clientWidth - 32;
+                gameCanvas.height = contentWrapper.clientHeight - 32;
+
+                const baseHeight = gameCanvas.height;
+                player = { 
+                    x: 50, y: 0, 
+                    width: baseHeight / 10, height: baseHeight / 10, 
+                    dy: 0, 
+                    jumpForce: baseHeight / 30, 
+                    grounded: false 
+                };
+                gravity = baseHeight / 600;
+                obstacles = [];
+                gameSpeed = baseHeight / 70;
+                score = 0;
+                gameOver = false;
+                gameOverMessage.style.display = 'none';
+
+                player.y = gameCanvas.height - player.height - 20;
+
+                gameCanvas.removeEventListener('click', jump);
+                gameCanvas.removeEventListener('touchstart', jump);
+                document.removeEventListener('keydown', handleKey);
+
+                gameCanvas.addEventListener('click', jump);
+                gameCanvas.addEventListener('touchstart', jump);
+                document.addEventListener('keydown', handleKey);
+
+                animateGame();
+            }
+            
+            gamePrompt.addEventListener('click', () => {
+                contentWrapper.classList.add('game-active');
+                setTimeout(() => {
+                    startGame();
+                }, 500);
+            });
+            
+            function handleKey(e) {
+                if (e.code === 'Space') jump();
+            }
+
+            function jump() {
+                if (gameOver) {
+                    startGame();
+                    return;
+                }
+                if (player.grounded) {
+                    player.dy = -player.jumpForce;
+                    player.grounded = false;
+                }
+            }
+            
+            function spawnObstacle() {
+                const height = Math.random() * (gameCanvas.height / 8) + (gameCanvas.height / 15);
+                obstacles.push({
+                    x: gameCanvas.width,
+                    y: gameCanvas.height - height - 20,
+                    width: gameCanvas.width / 35,
+                    height: height
+                });
+            }
+
+            let animationFrameId;
+            function animateGame() {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                animationFrameId = requestAnimationFrame(animateGame);
+                if (gameOver) return;
+
+                gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+                // Draw Ground
+                gctx.strokeStyle = 'rgba(29, 29, 31, 0.5)';
+                gctx.lineWidth = 2;
+                gctx.beginPath();
+                gctx.moveTo(0, gameCanvas.height - 20);
+                gctx.lineTo(gameCanvas.width, gameCanvas.height - 20);
+                gctx.stroke();
+
+                // Player
+                player.dy += gravity;
+                player.y += player.dy;
+
+                if (player.y + player.height > gameCanvas.height - 20) {
+                    player.y = gameCanvas.height - player.height - 20;
+                    player.dy = 0;
+                    player.grounded = true;
+                }
+
+                gctx.fillStyle = '#1d1d1f';
+                gctx.fillRect(player.x, player.y, player.width, player.height);
+
+                // Obstacles
+                if (Math.random() > 0.98 && (obstacles.length === 0 || obstacles[obstacles.length-1].x < gameCanvas.width - (gameCanvas.width / 3))) {
+                    spawnObstacle();
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    let o = obstacles[i];
+                    o.x -= gameSpeed;
+                    gctx.fillStyle = '#1d1d1f';
+                    gctx.fillRect(o.x, o.y, o.width, o.height);
+
+                    // Collision detection
+                    if (player.x < o.x + o.width &&
+                        player.x + player.width > o.x &&
+                        player.y < o.y + o.height &&
+                        player.y + player.height > o.y) {
+                        gameOver = true;
+                        gameOverMessage.style.display = 'flex';
+                    }
+
+                    if (o.x + o.width < 0) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+                
+                // Score and speed
+                score++;
+                gameSpeed += 0.002;
+                scoreDisplay.textContent = `Score: ${Math.floor(score / 10)}`;
+            }
+            
+            window.addEventListener('resize', () => {
+                if(contentWrapper.classList.contains('game-active')) {
+                    startGame();
+                }
+            });
+
+            // --- Particle Background ---
+            const particleCanvas = document.getElementById('particle-canvas');
+            const pctx = particleCanvas.getContext('2d');
+            let particlesArray = [];
             const mouse = { x: undefined, y: undefined, radius: 150 };
-
             window.addEventListener('mousemove', e => { mouse.x = e.x; mouse.y = e.y; });
             window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
-
-            class Particle {
-                constructor(x, y, dirX, dirY, size, color) {
-                    this.x = x; this.y = y; this.dirX = dirX; this.dirY = dirY;
-                    this.size = size; this.color = color;
-                    this.baseX = this.x; this.baseY = this.y;
-                    this.velX = 0; this.velY = 0;
-                }
-                draw() {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                    ctx.fill();
-                }
-                update() {
-                    if (this.x > canvas.width || this.x < 0) this.dirX = -this.dirX;
-                    if (this.y > canvas.height || this.y < 0) this.dirY = -this.dirY;
-                    
-                    let dx = mouse.x - this.x;
-                    let dy = mouse.y - this.y;
-                    let distance = Math.sqrt(dx*dx + dy*dy);
-                    if (distance < mouse.radius + this.size){
-                        let forceDirectionX = dx / distance;
-                        let forceDirectionY = dy / distance;
-                        let maxDistance = mouse.radius;
-                        let force = (maxDistance - distance) / maxDistance;
-                        let directionX = forceDirectionX * force * 2.5;
-                        let directionY = forceDirectionY * force * 2.5;
-                        this.velX -= directionX;
-                        this.velY -= directionY;
-                    }
-
-                    let springDx = this.baseX - this.x;
-                    let springDy = this.baseY - this.y;
-                    this.velX += springDx * 0.005;
-                    this.velY += springDy * 0.005;
-                    
-                    this.velX *= 0.96;
-                    this.velY *= 0.96;
-
-                    this.x += this.velX + this.dirX;
-                    this.y += this.velY + this.dirY;
-
-                    this.draw();
-                }
-            }
-            
-            function initParticles() {
-                particlesArray = [];
-                let numParticles = (canvas.height * canvas.width) / 9000;
-                for (let i = 0; i < numParticles; i++) {
-                    let size = (Math.random() * 2.5) + 1;
-                    let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
-                    let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-                    let dirX = (Math.random() * .3) - .15;
-                    let dirY = (Math.random() * .3) - .15;
-                    let color = 'rgba(255,255,255,0.8)';
-                    particlesArray.push(new Particle(x, y, dirX, dirY, size, color));
-                }
-            }
-
-            function connectParticles() {
-                let opacityValue = 1;
-                for (let a = 0; a < particlesArray.length; a++) {
-                    for (let b = a; b < particlesArray.length; b++) {
-                        let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
-                                     + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
-                        let connectDistance = (canvas.width/7) * (canvas.height/7);
-                        if (distance < connectDistance) {
-                            opacityValue = 1 - (distance / (connectDistance / 1.5));
-                            ctx.strokeStyle = `rgba(255,255,255,${opacityValue})`;
-                            ctx.lineWidth = 1;
-                            ctx.beginPath();
-                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-                            ctx.stroke();
-                        }
-                    }
-                }
-            }
-
-            function animateParticles() {
-                requestAnimationFrame(animateParticles);
-                ctx.clearRect(0,0,innerWidth, innerHeight);
-                for(let i=0; i<particlesArray.length; i++) {
-                    particlesArray[i].update();
-                }
-                connectParticles();
-            }
-            
-            const resizeCanvas = () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                initParticles();
-            };
-            window.addEventListener('resize', resizeCanvas);
-
+            class Particle { constructor(x, y, dirX, dirY, size) { this.x = x; this.y = y; this.dirX = dirX; this.dirY = dirY; this.size = size; this.baseX = this.x; this.baseY = this.y; this.velX = 0; this.velY = 0; } draw() { pctx.beginPath(); pctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false); pctx.fillStyle = 'rgba(255,255,255,0.8)'; pctx.fill(); } update() { if (this.x > particleCanvas.width || this.x < 0) this.dirX = -this.dirX; if (this.y > particleCanvas.height || this.y < 0) this.dirY = -this.dirY; let dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx*dx + dy*dy); if (distance < mouse.radius + this.size){ let forceDirectionX = dx / distance; let forceDirectionY = dy / distance; let maxDistance = mouse.radius; let force = (maxDistance - distance) / maxDistance; this.velX -= forceDirectionX * force * 2.5; this.velY -= forceDirectionY * force * 2.5; } let springDx = this.baseX - this.x; let springDy = this.baseY - this.y; this.velX += springDx * 0.005; this.velY += springDy * 0.005; this.velX *= 0.96; this.velY *= 0.96; this.x += this.velX + this.dirX; this.y += this.velY + this.dirY; this.draw(); } }
+            function initParticles() { particlesArray = []; let numParticles = (particleCanvas.height * particleCanvas.width) / 9000; for (let i = 0; i < numParticles; i++) { let size = (Math.random() * 2.5) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2); let dirX = (Math.random() * .2) - .1; let dirY = (Math.random() * .2) - .1; particlesArray.push(new Particle(x, y, dirX, dirY, size)); } }
+            function connectParticles() { let opacityValue = 1; for (let a = 0; a < particlesArray.length; a++) { for (let b = a; b < particlesArray.length; b++) { let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y)); let connectDistance = (particleCanvas.width/7) * (particleCanvas.height/7); if (distance < connectDistance) { opacityValue = 1 - (distance / (connectDistance / 1.5)); pctx.strokeStyle = `rgba(255,255,255,${opacityValue})`; pctx.lineWidth = 1; pctx.beginPath(); pctx.moveTo(particlesArray[a].x, particlesArray[a].y); pctx.lineTo(particlesArray[b].x, particlesArray[b].y); pctx.stroke(); } } } }
+            function animateParticles() { requestAnimationFrame(animateParticles); pctx.clearRect(0,0,innerWidth, innerHeight); for(let i=0; i<particlesArray.length; i++) { particlesArray[i].update(); } connectParticles(); }
+            const resizeParticleCanvas = () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; initParticles(); };
+            window.addEventListener('resize', resizeParticleCanvas);
             initParticles();
             animateParticles();
         });
