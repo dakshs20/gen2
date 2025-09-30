@@ -172,7 +172,10 @@
             const minutesEl = document.getElementById('minutes');
             const secondsEl = document.getElementById('seconds');
 
-            const countdownEndTime = new Date().getTime() + 24 * 60 * 60 * 1000;
+            // Set a fixed, universal end time for the countdown.
+            // Example: October 1, 2025 at 12:00:00 IST (Indian Standard Time)
+            // You can change this to your desired launch date and time.
+            const countdownEndTime = new Date('2025-10-01T12:00:00+05:30').getTime();
 
             const updateDigit = (element, value) => {
                 const formattedValue = value.toString().padStart(2, '0');
