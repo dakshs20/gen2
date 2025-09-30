@@ -233,7 +233,7 @@
                 <div id="game-prompt">
                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-controller" viewBox="0 0 16 16">
                         <path d="M11.5 6.027a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm2.5-.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-1.5 1.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm-6.5-3h1v1h1v1h-1v1h-1v-1h-1v-1h1v-1z"/>
-                        <path d="M3.051 3.27a.5.5 0 0 1 .354-.613l1.932-.518a.5.5 0 0 1 .62.39c.655-.079 1.35-.117 2.043-.117s1.388.038 2.043.117a.5.5 0 0 1 .62-.39l1.932.518a.5.5 0 0 1 .354.613l-.518 1.932a.5.5 0 0 1-.613.354c-.18.044-.363.078-.548.106-.18.028-.36.05-.54.068a.5.5 0 0 1-.497-.497l-.006-.027c-.038-.17-.06-.34-.06-.517s.022-.347.06-.517l.006-.027a.5.5 0 0 1 .497-.497c.18-.018.36-.04.54-.068.185-.028.368-.062.548-.106l.518-1.932L12.45 3.61a.5.5 0 0 1-.39.62l-.518 1.932c-.18.675-1.043 1.15-1.996 1.15s-1.816-.475-1.996-1.15l-.518-1.932a.5.5 0 0 1-.39-.62l.518-1.932L3.05 3.27zM12.95 12.73a.5.5 0 0 1-.354.613l-1.932.518a.5.5 0 0 1-.62-.39c-.655.079-1.35.117-2.043.117s-1.388-.038-2.043-.117a.5.5 0 0 1-.62.39l-1.932-.518a.5.5 0 0 1-.354-.613l.518-1.932a.5.5 0 0 1 .613-.354c.18-.044.363.078.548-.106.18-.028.36-.05.54-.068a.5.5 0 0 1 .497.497l.006.027c.038.17.06.34.06.517s-.022.347-.06.517l-.006.027a.5.5 0 0 1-.497.497c-.18.018-.36.04-.54.068-.185.028-.368.062-.548-.106l-.518 1.932 1.932.518a.5.5 0 0 1 .39-.62l.518-1.932c.18-.675 1.043-1.15 1.996-1.15s1.816.475 1.996 1.15l.518 1.932a.5.5 0 0 1 .39.62l-1.932-.518z"/>
+                        <path d="M3.051 3.27a.5.5 0 0 1 .354-.613l1.932-.518a.5.5 0 0 1 .62.39c.655-.079 1.35-.117 2.043-.117s1.388.038 2.043.117a.5.5 0 0 1 .62-.39l1.932.518a.5.5 0 0 1 .354.613l-.518 1.932a.5.5 0 0 1-.613.354c-.18.044-.363.078-.548.106-.18.028-.36.05-.54.068a.5.5 0 0 1-.497-.497l-.006-.027c-.038-.17-.06-.34-.06-.517s.022-.347.06-.517l.006-.027a.5.5 0 0 1 .497-.497c.18-.018.36-.04.54-.068.185-.028.368-.062.548-.106l.518-1.932L12.45 3.61a.5.5 0 0 1-.39.62l-.518 1.932c-.18.675-1.043 1.15-1.996 1.15s-1.816-.475-1.996-1.15l-.518-1.932a.5.5 0 0 1-.39-.62l.518-1.932L3.05 3.27zM12.95 12.73a.5.5 0 0 1-.354.613l-1.932.518a.5.5 0 0 1-.62-.39c-.655.079-1.35.117 2.043-.117s-1.388-.038-2.043-.117a.5.5 0 0 1-.62.39l-1.932-.518a.5.5 0 0 1-.354-.613l.518-1.932a.5.5 0 0 1 .613-.354c.18-.044.363.078.548-.106.18-.028.36-.05.54-.068a.5.5 0 0 1 .497.497l.006.027c.038.17.06.34.06.517s-.022.347-.06.517l-.006.027a.5.5 0 0 1-.497.497c-.18.018-.36.04-.54.068-.185.028-.368.062-.548-.106l-.518 1.932 1.932.518a.5.5 0 0 1 .39-.62l.518-1.932c.18-.675-1.043-1.15-1.996-1.15s1.816.475 1.996 1.15l.518 1.932a.5.5 0 0 1 .39.62l-1.932-.518z"/>
                     </svg>
                     <span>Play Circuit Jumper</span>
                 </div>
@@ -242,7 +242,7 @@
             <div id="game-container">
                 <canvas id="game-canvas"></canvas>
                 <div id="game-ui">
-                    <div id="score-display">Score: 0</div>
+                    <div id="score-display">Score: 0 | High: 0</div>
                 </div>
                 <div id="game-over-message">
                     GAME OVER
@@ -293,7 +293,7 @@
             const scoreDisplay = document.getElementById('score-display');
             const gameOverMessage = document.getElementById('game-over-message');
 
-            let player, gravity, obstacles, gameSpeed, score, gameOver;
+            let player, gravity, obstacles, gameSpeed, score, gameOver, highScore, nextSpeedIncrease;
             
             function startGame() {
                 gameCanvas.width = contentWrapper.clientWidth - 32;
@@ -304,14 +304,16 @@
                     x: 50, y: 0, 
                     width: baseHeight / 10, height: baseHeight / 10, 
                     dy: 0, 
-                    jumpForce: baseHeight / 30, 
+                    jumpForce: baseHeight / 28, 
                     grounded: false 
                 };
-                gravity = baseHeight / 600;
+                gravity = baseHeight / 550;
                 obstacles = [];
-                gameSpeed = baseHeight / 70;
+                gameSpeed = baseHeight / 80; // Slower initial speed
                 score = 0;
                 gameOver = false;
+                highScore = localStorage.getItem('circuitJumperHighScore') || 0;
+                nextSpeedIncrease = 500; // First speed up at score 50
                 gameOverMessage.style.display = 'none';
 
                 player.y = gameCanvas.height - player.height - 20;
@@ -335,7 +337,10 @@
             });
             
             function handleKey(e) {
-                if (e.code === 'Space') jump();
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    jump();
+                }
             }
 
             function jump() {
@@ -350,20 +355,42 @@
             }
             
             function spawnObstacle() {
-                const height = Math.random() * (gameCanvas.height / 8) + (gameCanvas.height / 15);
+                const baseHeight = gameCanvas.height;
+                const height = Math.random() * (baseHeight / 7) + (baseHeight / 15);
                 obstacles.push({
                     x: gameCanvas.width,
                     y: gameCanvas.height - height - 20,
-                    width: gameCanvas.width / 35,
+                    width: baseHeight / 15,
                     height: height
                 });
+
+                // Spawn a second, trickier obstacle at higher scores
+                if (score > 1500 && Math.random() > 0.5) {
+                     const height2 = Math.random() * (baseHeight / 7) + (baseHeight / 15);
+                     obstacles.push({
+                        x: gameCanvas.width + (baseHeight / 15) * (Math.random() * 3 + 4),
+                        y: gameCanvas.height - height2 - 20,
+                        width: baseHeight / 15,
+                        height: height2
+                    });
+                }
             }
 
             let animationFrameId;
             function animateGame() {
                 if (animationFrameId) cancelAnimationFrame(animationFrameId);
                 animationFrameId = requestAnimationFrame(animateGame);
-                if (gameOver) return;
+                
+                if (gameOver) {
+                    const finalScore = Math.floor(score / 10);
+                    if (finalScore > highScore) {
+                        highScore = finalScore;
+                        localStorage.setItem('circuitJumperHighScore', highScore);
+                    }
+                    gameOverMessage.innerHTML = `GAME OVER <br> <span>Final Score: ${finalScore} | Click to Restart</span>`;
+                    gameOverMessage.style.display = 'flex';
+                    return;
+                }
 
                 gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
@@ -389,7 +416,10 @@
                 gctx.fillRect(player.x, player.y, player.width, player.height);
 
                 // Obstacles
-                if (Math.random() > 0.98 && (obstacles.length === 0 || obstacles[obstacles.length-1].x < gameCanvas.width - (gameCanvas.width / 3))) {
+                let obstacleSpawnGap = gameCanvas.width - (gameCanvas.width / 3);
+                obstacleSpawnGap = Math.max(gameCanvas.width / 2.5, obstacleSpawnGap - (score / 10));
+
+                if (Math.random() > 0.97 && (obstacles.length === 0 || obstacles[obstacles.length - 1].x < obstacleSpawnGap)) {
                     spawnObstacle();
                 }
 
@@ -405,7 +435,6 @@
                         player.y < o.y + o.height &&
                         player.y + player.height > o.y) {
                         gameOver = true;
-                        gameOverMessage.style.display = 'flex';
                     }
 
                     if (o.x + o.width < 0) {
@@ -415,8 +444,12 @@
                 
                 // Score and speed
                 score++;
-                gameSpeed += 0.002;
-                scoreDisplay.textContent = `Score: ${Math.floor(score / 10)}`;
+                if (score > nextSpeedIncrease) {
+                    gameSpeed += 0.4;
+                    nextSpeedIncrease += 500; // Increase speed more frequently as game progresses
+                }
+                const currentScore = Math.floor(score / 10);
+                scoreDisplay.textContent = `Score: ${currentScore} | High: ${highScore}`;
             }
             
             window.addEventListener('resize', () => {
