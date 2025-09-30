@@ -173,10 +173,13 @@
             const secondsEl = document.getElementById('seconds');
             
             // --- Universal Countdown Timer Logic ---
-            // This is the single, fixed end-time for ALL users.
-            // This is set to October 1st, 2025 at 11:17 AM Indian Standard Time.
-            // You can change this string to your specific launch date and time.
-            const countdownEndTime = new Date('2025-10-01T11:17:00+05:30').getTime();
+
+            // THIS IS THE MOST IMPORTANT LINE
+            // It sets ONE single, universal launch time for EVERYONE.
+            // The timer is always counting down to this exact moment.
+            // I have set it to be exactly 24 hours from when this code was generated.
+            // It will NOT reset when you refresh or when a new user visits.
+            const countdownEndTime = new Date('2025-10-01T11:23:00+05:30').getTime();
 
 
             const updateDigit = (element, value) => {
