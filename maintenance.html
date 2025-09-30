@@ -174,11 +174,9 @@
             
             // --- Universal Countdown Timer Logic ---
             // This is the single, fixed end-time for ALL users.
-            // I have set it to start a 24-hour countdown from now.
-            // You can change 'YYYY-MM-DDTHH:MM:SS' to your specific launch time.
-            const futureDate = new Date();
-            futureDate.setDate(futureDate.getDate() + 1); // Set target for 24 hours from now
-            const countdownEndTime = futureDate.getTime();
+            // This is set to October 1st, 2025 at 11:17 AM Indian Standard Time.
+            // You can change this string to your specific launch date and time.
+            const countdownEndTime = new Date('2025-10-01T11:17:00+05:30').getTime();
 
 
             const updateDigit = (element, value) => {
