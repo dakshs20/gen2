@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Under Maintenance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --text-primary-color: #1d1d1f; /* Near-black for premium feel */
+            --text-secondary-color: #555555;
+            --container-bg: rgba(255, 255, 255, 0.2);
+            --border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            color: var(--text-primary-color);
+            background: linear-gradient(-45deg, #a0e9ff, #d6a0ff, #a0ffb0, #ffa0e0);
+            background-size: 400% 400%;
+            animation: gradientAnimation 25s ease infinite;
+        }
+
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #maintenance-section {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            text-align: center;
+            z-index: 9999;
+            padding: 1.5rem;
+        }
+
+        #particle-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+        
+        /* Glassmorphism content container */
+        .content-wrapper {
+            max-width: 900px;
+            position: relative;
+            z-index: 1;
+            background: var(--container-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 1.5rem;
+            padding: clamp(2rem, 8vw, 4rem);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            animation: float 10s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .animated-item {
+             animation: floatIn 1.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+             opacity: 0;
+             transform: translateY(30px);
+        }
+
+        @keyframes floatIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-line {
+            font-size: clamp(1.75rem, 5vw, 3rem);
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+            animation-delay: 0.5s;
+        }
+
+        .subtext {
+            font-size: clamp(1rem, 2.5vw, 1.1rem);
+            color: var(--text-secondary-color);
+            margin-top: 1.5rem;
+            line-height: 1.6;
+            font-weight: 400;
+            transition: opacity 0.4s ease;
+            animation-delay: 0.9s;
+        }
+        .content-wrapper:hover .subtext {
+            opacity: 0.8;
+        }
+        
+        .countdown-timer {
+            margin-top: 3rem;
+            display: flex;
+            justify-content: center;
+            gap: clamp(1rem, 4vw, 2.5rem);
+            font-family: 'Roboto Mono', monospace;
+            animation-delay: 0.7s;
+        }
+
+        .time-segment {
+            perspective: 1000px;
+        }
+
+        .time-digit {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .digit-update-animation {
+             animation: smoothFadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes smoothFadeUp {
+            from { transform: translateY(15px); opacity: 0; }
+            to   { transform: translateY(0px); opacity: 1; }
+        }
+
+        .time-label {
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-secondary-color);
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <section id="maintenance-section">
+        <canvas id="particle-canvas"></canvas>
+        <div class="content-wrapper">
+            <h1 class="main-line animated-item">We’ve gone off-grid to create what the world isn’t ready for.</h1>
+            <div id="countdown-timer" class="countdown-timer animated-item">
+                <div class="time-segment">
+                    <span id="days" class="time-digit">00</span>
+                    <div class="time-label">Days</div>
+                </div>
+                <div class="time-segment">
+                    <span id="hours" class="time-digit">00</span>
+                    <div class="time-label">Hours</div>
+                </div>
+                <div class="time-segment">
+                    <span id="minutes" class="time-digit">00</span>
+                    <div class="time-label">Minutes</div>
+                </div>
+                 <div class="time-segment">
+                    <span id="seconds" class="time-digit">00</span>
+                    <div class="time-label">Seconds</div>
+                </div>
+            </div>
+             <p class="subtext animated-item">Our website will be back online soon. What’s coming will change everything.</p>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Countdown Timer Logic ---
+            const daysEl = document.getElementById('days');
+            const hoursEl = document.getElementById('hours');
+            const minutesEl = document.getElementById('minutes');
+            const secondsEl = document.getElementById('seconds');
+
+            const countdownEndTime = new Date().getTime() + 24 * 60 * 60 * 1000;
+
+            const updateDigit = (element, value) => {
+                const formattedValue = value.toString().padStart(2, '0');
+                if (element.textContent !== formattedValue) {
+                    element.textContent = formattedValue;
+                    element.classList.add('digit-update-animation');
+                    setTimeout(() => element.classList.remove('digit-update-animation'), 800);
+                }
+            };
+            
+            const updateCountdown = () => {
+                const now = new Date().getTime();
+                const distance = countdownEndTime - now;
+
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('countdown-timer').innerHTML = "<div class='text-xl font-bold' style='font-family: \"Inter\", sans-serif;'>Reality has caught up.</div>";
+                    return;
+                }
+                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                updateDigit(daysEl, d);
+                updateDigit(hoursEl, h);
+                updateDigit(minutesEl, m);
+                updateDigit(secondsEl, s);
+            };
+            const countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
+
+            // --- Interactive Connected Particle Background ---
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particlesArray;
+
+            const mouse = { x: undefined, y: undefined, radius: 150 };
+
+            window.addEventListener('mousemove', e => { mouse.x = e.x; mouse.y = e.y; });
+            window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
+
+            class Particle {
+                constructor(x, y, dirX, dirY, size, color) {
+                    this.x = x; this.y = y; this.dirX = dirX; this.dirY = dirY;
+                    this.size = size; this.color = color;
+                    this.baseX = this.x; this.baseY = this.y;
+                    this.velX = 0; this.velY = 0;
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    ctx.fill();
+                }
+                update() {
+                    // Wall collision
+                    if (this.x > canvas.width || this.x < 0) this.dirX = -this.dirX;
+                    if (this.y > canvas.height || this.y < 0) this.dirY = -this.dirY;
+                    
+                    // Mouse interaction
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < mouse.radius + this.size){
+                        // Repulsion force
+                        let forceDirectionX = dx / distance;
+                        let forceDirectionY = dy / distance;
+                        let maxDistance = mouse.radius;
+                        let force = (maxDistance - distance) / maxDistance;
+                        let directionX = forceDirectionX * force * 2.5;
+                        let directionY = forceDirectionY * force * 2.5;
+                        this.velX -= directionX;
+                        this.velY -= directionY;
+                    }
+
+                    // Spring back to base position
+                    let springDx = this.baseX - this.x;
+                    let springDy = this.baseY - this.y;
+                    this.velX += springDx * 0.005;
+                    this.velY += springDy * 0.005;
+                    
+                    // Apply friction
+                    this.velX *= 0.96;
+                    this.velY *= 0.96;
+
+                    this.x += this.velX + this.dirX;
+                    this.y += this.velY + this.dirY;
+
+                    this.draw();
+                }
+            }
+            
+            function initParticles() {
+                particlesArray = [];
+                let numParticles = (canvas.height * canvas.width) / 9000;
+                for (let i = 0; i < numParticles; i++) {
+                    let size = (Math.random() * 2.5) + 1;
+                    let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                    let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                    let dirX = (Math.random() * .3) - .15;
+                    let dirY = (Math.random() * .3) - .15;
+                    let color = 'rgba(255,255,255,0.8)';
+                    particlesArray.push(new Particle(x, y, dirX, dirY, size, color));
+                }
+            }
+
+            function connectParticles() {
+                let opacityValue = 1;
+                for (let a = 0; a < particlesArray.length; a++) {
+                    for (let b = a; b < particlesArray.length; b++) {
+                        let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
+                                     + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                        let connectDistance = (canvas.width/7) * (canvas.height/7);
+                        if (distance < connectDistance) {
+                            opacityValue = 1 - (distance / (connectDistance / 1.5));
+                            ctx.strokeStyle = `rgba(255,255,255,${opacityValue})`;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function animateParticles() {
+                requestAnimationFrame(animateParticles);
+                ctx.clearRect(0,0,innerWidth, innerHeight);
+                for(let i=0; i<particlesArray.length; i++) {
+                    particlesArray[i].update();
+                }
+                connectParticles();
+            }
+            
+            const resizeCanvas = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            };
+            window.addEventListener('resize', resizeCanvas);
+
+            initParticles();
+            animateParticles();
+        });
+    </script>
+
+</body>
+</html>
+
