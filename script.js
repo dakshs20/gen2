@@ -48,7 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
             DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id);
         }
     });
+    // Select all modal closing buttons and all modal backdrop elements
     DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
+    DOMElements.modalBackdrops = document.querySelectorAll('.modal-backdrop');
     DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option');
     DOMElements.masonryColumns = document.querySelectorAll('.masonry-column');
     DOMElements.statCards = document.querySelectorAll('.stat-card');
@@ -73,8 +75,21 @@ function restructureGalleryForMobile() {
 }
 
 function initializeEventListeners() {
+    // Ensure the Google Sign In button in the modal is correctly wired
     DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
+
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
+    
+    // Add event listener to close modals when clicking the backdrop
+    DOMElements.modalBackdrops.forEach(backdrop => {
+        backdrop.addEventListener('click', (event) => {
+            // Check if the click occurred directly on the backdrop element (not a child element)
+            if (event.target === backdrop) {
+                toggleModal(backdrop, false);
+            }
+        });
+    });
+
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     
     DOMElements.promptInput?.addEventListener('keydown', (event) => {
@@ -128,7 +143,7 @@ function initializeEventListeners() {
     });
 }
 
-// --- Animations ---
+// --- Animations (omitted for brevity) ---
 function initializeAnimations() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
@@ -265,6 +280,7 @@ function updateUIForAuthState(user) {
                  <button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button>
             </div>
         `;
+        // Ensure the buttons that appear when signed out are wired to the sign-in function
         document.getElementById('sign-in-btn-desktop').addEventListener('click', signInWithGoogle);
         document.getElementById('sign-in-btn-mobile').addEventListener('click', signInWithGoogle);
     }
@@ -313,9 +329,11 @@ function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
         modal.style.display = 'flex';
+        // Remove style display none after transition to display flex
         setTimeout(() => modal.setAttribute('aria-hidden', 'false'), 10);
     } else {
         modal.setAttribute('aria-hidden', 'true');
+        // Set display to none after the transition is complete (300ms is common)
         setTimeout(() => modal.style.display = 'none', 300);
     }
 }
@@ -325,13 +343,20 @@ function closeAllModals() {
 }
 
 function signInWithGoogle() {
-    signInWithPopup(auth, provider).catch(console.error);
+    // This is the core function that handles the sign-in popup
+    signInWithPopup(auth, provider)
+        .then(() => {
+            // Once signed in, close the modal immediately
+            closeAllModals();
+        })
+        .catch(console.error);
 }
 
 // --- Image Generation ---
 async function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
     if (isGenerating) return;
     if (!currentUser) {
+        // This is the trigger for the pop up
         toggleModal(DOMElements.authModal, true);
         return;
     }
@@ -395,7 +420,10 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
 
     } catch (error) {
         console.error("Generation Error:", error);
-        alert(`An error occurred during generation: ${error.message}`);
+        // Use custom modal or UI element for error instead of alert
+        // For simplicity here, we log and can update later if a dedicated error modal is built
+        // alert(`An error occurred during generation: ${error.message}`);
+        console.error(`An error occurred during generation: ${error.message}`);
     } finally {
         clearInterval(timerInterval);
         setLoadingState(false);
@@ -512,6 +540,5 @@ function downloadPreviewImage() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         })
-        .catch(() => alert('An error occurred while downloading the image.'));
+        .catch(() => console.error('An error occurred while downloading the image.'));
 }
-
