@@ -342,7 +342,14 @@ function closeAllModals() {
     document.querySelectorAll('[role="dialog"]').forEach(modal => toggleModal(modal, false));
 }
 
-function signInWithGoogle() {
+// *** CRITICAL FIX: Ensure the event is stopped at the button level ***
+function signInWithGoogle(event) {
+    // Stop the event from propagating up to the modal's backdrop handler
+    // This is the simplest way to guarantee the button action executes first.
+    if (event && event.stopPropagation) {
+        event.stopPropagation();
+    }
+    
     // This is the core function that handles the sign-in popup
     signInWithPopup(auth, provider)
         .then(() => {
