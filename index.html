@@ -241,6 +241,16 @@
                 </div>
             </div>
         </div>
+        
+        <!-- New User Welcome Modal -->
+        <div id="new-user-credits-modal" role="dialog" aria-hidden="true" class="modal-backdrop fixed inset-0 bg-black/40 backdrop-blur-sm z-50 items-center justify-center p-4" style="display: none;">
+            <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center" onclick="event.stopPropagation()">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Congratulations!</h2>
+                <p class="text-gray-500 mb-6">You've received <span class="font-bold text-[#517CBE]">10 free credits</span> to start creating your masterpieces.</p>
+                <button class="close-modal-btn w-full bg-[#517CBE] text-white font-semibold py-3 px-4 rounded-lg hover:bg-[#4168a3] block">Start Generating</button>
+            </div>
+        </div>
+
         <div id="out-of-credits-modal" role="dialog" aria-hidden="true" class="modal-backdrop fixed inset-0 bg-black/40 backdrop-blur-sm z-50 items-center justify-center p-4" style="display: none;">
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center" onclick="event.stopPropagation()">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-2">Out of Credits</h2>
@@ -306,3 +316,4 @@
         <script type="module" src="script.js"></script>
     </body>
 </html>
+
