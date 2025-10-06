@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'preview-input-image-container', 'preview-input-image', 'change-input-image-btn', 'remove-input-image-btn', 'preview-image-upload-input',
         'hero-section', 'hero-headline', 'hero-subline', 'typewriter', 'prompt-bar-container',
         'mobile-menu', 'mobile-menu-btn', 'menu-open-icon', 'menu-close-icon',
-        'button-timer', 'button-content', 'style-selector'
+        'button-timer', 'button-content', 'style-selector', 'mobile-style-toggle-btn', 'mobile-style-options'
     ];
     ids.forEach(id => {
         if (id) {
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
     DOMElements.modalBackdrops = document.querySelectorAll('.modal-backdrop');
     DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option');
-    DOMElements.styleBtns = document.querySelectorAll('.style-btn');
+    DOMElements.styleBtns = document.querySelectorAll('.style-btn'); // This now selects ALL style buttons
     DOMElements.masonryColumns = document.querySelectorAll('.masonry-column');
     DOMElements.statCards = document.querySelectorAll('.stat-card');
     DOMElements.counters = document.querySelectorAll('.counter');
@@ -102,14 +102,24 @@ function initializeEventListeners() {
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
 
-    // --- Aspect Ratio Listeners ---
+    // --- Popover Listeners (Ratio & Mobile Style) ---
     DOMElements.ratioBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!DOMElements.ratioBtn.disabled) {
-            DOMElements.ratioOptions.classList.toggle('hidden');
-        }
+        if (!DOMElements.ratioBtn.disabled) DOMElements.ratioOptions?.classList.toggle('hidden');
     });
-    document.addEventListener('click', () => DOMElements.ratioOptions?.classList.add('hidden'));
+    // Correctly wired event listener for the mobile style toggle button
+    DOMElements.mobileStyleToggleBtn?.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents the global click listener from firing immediately
+        DOMElements.mobileStyleOptions?.classList.toggle('hidden');
+    });
+
+    // Global click listener to close popovers
+    document.addEventListener('click', () => {
+        DOMElements.ratioOptions?.classList.add('hidden');
+        DOMElements.mobileStyleOptions?.classList.add('hidden');
+    });
+
+    // --- Selection Logic (Ratio & Style) ---
     DOMElements.ratioOptionBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             currentAspectRatio = e.currentTarget.dataset.ratio;
@@ -118,14 +128,16 @@ function initializeEventListeners() {
         });
     });
 
-    // --- NEW: Style Selector Logic ---
+    // Unified style button logic for both desktop and mobile
     DOMElements.styleBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Visually update the buttons
-            DOMElements.styleBtns.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            // Update the global state
             currentStyle = btn.dataset.style;
+            // Update all style buttons to show the current selection
+            DOMElements.styleBtns.forEach(b => {
+                 b.classList.toggle('selected', b.dataset.style === currentStyle);
+            });
+            // Close mobile popover if it's open
+            DOMElements.mobileStyleOptions?.classList.add('hidden');
         });
     });
 
