@@ -136,8 +136,8 @@
         <!-- Prompt Bar -->
         <footer class="fixed bottom-0 left-0 right-0 p-4 z-40">
             <div class="max-w-2xl mx-auto flex flex-col items-center gap-3">
-                 <!-- NEW: Style Selector -->
-                <div id="style-selector" class="flex flex-wrap justify-center gap-2">
+                 <!-- Desktop Style Selector (hidden on mobile) -->
+                <div id="style-selector" class="hidden md:flex flex-wrap justify-center gap-2">
                     <button class="style-btn selected" data-style="Realistic">Realistic</button>
                     <button class="style-btn" data-style="Anime">Anime</button>
                     <button class="style-btn" data-style="Graffiti">Graffiti</button>
@@ -156,6 +156,24 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
                         </svg>
                     </button>
+
+                    <!-- NEW: Mobile Style Button (hidden on desktop) -->
+                    <div class="relative flex-shrink-0 md:hidden">
+                         <button id="mobile-style-toggle-btn" class="w-10 h-10 rounded-full hover:bg-gray-200/70 transition-colors flex items-center justify-center" title="Select Style">
+                             <svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
+                                <path fill-rule="evenodd" d="M9.44 1.614a.75.75 0 01.06 1.055l-4.75 6.5a.75.75 0 01-1.11.02l-1.1-1.25a.75.75 0 111.12-1.003l.523.595L9.44 1.614zM16.12 4.21a.75.75 0 011.06 0l.75.75a.75.75 0 010 1.06l-4.75 4.75a.75.75 0 01-1.06 0l-.75-.75a.75.75 0 010-1.06l4.75-4.75zM15.44 10.614a.75.75 0 01.06 1.055l-4.75 6.5a.75.75 0 01-1.11.02l-1.1-1.25a.75.75 0 111.12-1.003l.523.595L15.44 10.614z" clip-rule="evenodd" />
+                             </svg>
+                         </button>
+                         <div id="mobile-style-options" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-white/80 backdrop-blur-md rounded-lg border border-gray-200/80 shadow-xl p-1">
+                             <button class="style-btn w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md" data-style="Realistic">Realistic</button>
+                             <button class="style-btn w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md" data-style="Anime">Anime</button>
+                             <button class="style-btn w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md" data-style="Graffiti">Graffiti</button>
+                             <button class="style-btn w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md" data-style="Pixel Art">Pixel Art</button>
+                             <button class="style-btn w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md" data-style="Cartoon">Cartoon</button>
+                         </div>
+                    </div>
+
                     <textarea id="prompt-input" rows="1" class="w-full bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none text-base py-2 px-2" placeholder="Describe your vision..."></textarea>
                     <div class="relative flex-shrink-0">
                         <button id="ratio-btn" class="w-10 h-10 rounded-full hover:bg-gray-200/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center" title="Aspect Ratio">
