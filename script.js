@@ -23,6 +23,7 @@ let currentUser;
 let currentUserCredits = 0;
 let isGenerating = false;
 let currentAspectRatio = '1:1';
+let currentStyle = 'Realistic'; // Default style
 let uploadedImageData = null;
 let currentPreviewInputData = null; 
 let timerInterval;
@@ -41,17 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
         'preview-input-image-container', 'preview-input-image', 'change-input-image-btn', 'remove-input-image-btn', 'preview-image-upload-input',
         'hero-section', 'hero-headline', 'hero-subline', 'typewriter', 'prompt-bar-container',
         'mobile-menu', 'mobile-menu-btn', 'menu-open-icon', 'menu-close-icon',
-        'button-timer', 'button-content'
+        'button-timer', 'button-content', 'style-selector'
     ];
     ids.forEach(id => {
         if (id) {
             DOMElements[id.replace(/-./g, c => c[1].toUpperCase())] = document.getElementById(id);
         }
     });
-    // Select all modal closing buttons and all modal backdrop elements
+    
+    // Select all buttons and other query-based elements
     DOMElements.closeModalBtns = document.querySelectorAll('.close-modal-btn');
     DOMElements.modalBackdrops = document.querySelectorAll('.modal-backdrop');
     DOMElements.ratioOptionBtns = document.querySelectorAll('.ratio-option');
+    DOMElements.styleBtns = document.querySelectorAll('.style-btn');
     DOMElements.masonryColumns = document.querySelectorAll('.masonry-column');
     DOMElements.statCards = document.querySelectorAll('.stat-card');
     DOMElements.counters = document.querySelectorAll('.counter');
@@ -75,44 +78,31 @@ function restructureGalleryForMobile() {
 }
 
 function initializeEventListeners() {
-    // --- Authentication Listeners ---
-    // This is the critical fix: Ensure the Google Sign In button in the new modal is correctly wired.
-    if (DOMElements.googleSigninBtn) {
-        DOMElements.googleSigninBtn.addEventListener('click', signInWithGoogle);
-    } else {
-        console.error("Critical Error: The Google Sign-In button with ID 'google-signin-btn' was not found in the DOM.");
-    }
-    
-    // --- Modal Closing Listeners ---
-    // Make all buttons with the '.close-modal-btn' class close any open modal.
+    // --- Authentication & Modal Listeners ---
+    DOMElements.googleSigninBtn?.addEventListener('click', signInWithGoogle);
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
-    
-    // Make clicks on the modal backdrop (the dark overlay) close the modal.
     DOMElements.modalBackdrops.forEach(backdrop => {
         backdrop.addEventListener('click', (event) => {
-            // This check ensures that only a click on the backdrop itself, and not its children (the modal content), will trigger the close action.
-            if (event.target === backdrop) {
-                closeAllModals();
-            }
+            if (event.target === backdrop) closeAllModals();
         });
     });
 
     // --- Core UI Listeners ---
-    DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
-    
+    DOMElements.generateBtn?.addEventListener('click', () => handleImageGenerationRequest());
     DOMElements.promptInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             handleImageGenerationRequest();
         }
     });
-
     DOMElements.promptInput?.addEventListener('input', autoResizeTextarea);
     
+    // --- Image Upload Listeners ---
     DOMElements.imageUploadBtn?.addEventListener('click', () => DOMElements.imageUploadInput.click());
     DOMElements.imageUploadInput?.addEventListener('change', handleImageUpload);
     DOMElements.removeImageBtn?.addEventListener('click', removeUploadedImage);
 
+    // --- Aspect Ratio Listeners ---
     DOMElements.ratioBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!DOMElements.ratioBtn.disabled) {
@@ -128,6 +118,17 @@ function initializeEventListeners() {
         });
     });
 
+    // --- NEW: Style Selector Logic ---
+    DOMElements.styleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Visually update the buttons
+            DOMElements.styleBtns.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            // Update the global state
+            currentStyle = btn.dataset.style;
+        });
+    });
+
     // --- Preview Modal Listeners ---
     DOMElements.closePreviewBtn?.addEventListener('click', () => toggleModal(DOMElements.previewModal, false));
     DOMElements.downloadBtn?.addEventListener('click', downloadPreviewImage);
@@ -136,21 +137,15 @@ function initializeEventListeners() {
     DOMElements.previewImageUploadInput?.addEventListener('change', handlePreviewImageChange);
     DOMElements.removeInputImageBtn?.addEventListener('click', removePreviewInputImage);
     
-    // --- Mobile Menu Listener ---
+    // --- Mobile Menu & Header Scroll ---
     DOMElements.mobileMenuBtn?.addEventListener('click', () => {
         const isHidden = DOMElements.mobileMenu.classList.toggle('hidden');
         DOMElements.menuOpenIcon.classList.toggle('hidden', !isHidden);
         DOMElements.menuCloseIcon.classList.toggle('hidden', isHidden);
     });
-
-    // --- Header Scroll Effect ---
     window.addEventListener('scroll', () => {
         const header = document.querySelector('header');
-        if (window.scrollY > 10) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
+        header.classList.toggle('scrolled', window.scrollY > 10);
     });
 }
 
@@ -160,10 +155,8 @@ function initializeAnimations() {
     if (prefersReducedMotion) return;
     
     gsap.registerPlugin(ScrollTrigger, TextPlugin);
-
     gsap.fromTo(DOMElements.heroHeadline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 });
     gsap.fromTo(DOMElements.heroSubline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 });
-
     const words = ["creators.", "agencies.", "enterprises."];
     let masterTl = gsap.timeline({ repeat: -1 });
     words.forEach(word => {
@@ -171,23 +164,10 @@ function initializeAnimations() {
         tl.to("#typewriter", { text: word, duration: 1, ease: "none" });
         masterTl.add(tl);
     });
-    
-    if (DOMElements.statCards.length > 0) {
-        gsap.fromTo(DOMElements.statCards, { opacity: 0, y: 30, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out', scrollTrigger: { trigger: "#stats-section", start: "top 85%" } });
-    }
-
-    if (DOMElements.counters.length > 0) {
-        DOMElements.counters.forEach(counter => {
-            const target = +counter.dataset.target;
-            const proxy = { val: 0 }; 
-            gsap.to(proxy, { val: target, duration: 2.5, ease: "power2.out", scrollTrigger: { trigger: counter, start: "top 90%" }, onUpdate: () => counter.textContent = Math.ceil(proxy.val) });
-        });
-    }
-
+    if (DOMElements.statCards.length > 0) gsap.fromTo(DOMElements.statCards, { opacity: 0, y: 30, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out', scrollTrigger: { trigger: "#stats-section", start: "top 85%" } });
+    if (DOMElements.counters.length > 0) DOMElements.counters.forEach(counter => { const target = +counter.dataset.target; const proxy = { val: 0 }; gsap.to(proxy, { val: target, duration: 2.5, ease: "power2.out", scrollTrigger: { trigger: counter, start: "top 90%" }, onUpdate: () => counter.textContent = Math.ceil(proxy.val) }); });
     const testimonialSection = document.getElementById('testimonial-section');
-    if(testimonialSection) {
-        gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), { opacity: 0, y: 50, duration: 1, stagger: 0.2, ease: 'power3.out', scrollTrigger: { trigger: testimonialSection, start: "top 80%" } });
-    }
+    if(testimonialSection) gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), { opacity: 0, y: 50, duration: 1, stagger: 0.2, ease: 'power3.out', scrollTrigger: { trigger: testimonialSection, start: "top 80%" } });
 }
 
 
@@ -196,32 +176,15 @@ function updateUIForAuthState(user) {
     currentUser = user;
     const nav = DOMElements.headerNav;
     const mobileNav = DOMElements.mobileMenu;
-
     if (user) {
-        nav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
-            <div id="credits-counter" class="text-sm font-medium text-gray-700 px-3 py-1">Credits: ...</div>
-            <button id="sign-out-btn-desktop" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Sign Out</button>
-        `;
-        mobileNav.innerHTML = `
-            <a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a>
-            <div id="credits-counter-mobile" class="text-center text-lg font-semibold text-gray-700 p-3 my-2 border-y">Credits: ...</div>
-            <button id="sign-out-btn-mobile" class="w-full text-left text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Sign Out</button>
-        `;
+        nav.innerHTML = `<a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a><div id="credits-counter" class="text-sm font-medium text-gray-700 px-3 py-1">Credits: ...</div><button id="sign-out-btn-desktop" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Sign Out</button>`;
+        mobileNav.innerHTML = `<a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a><div id="credits-counter-mobile" class="text-center text-lg font-semibold text-gray-700 p-3 my-2 border-y">Credits: ...</div><button id="sign-out-btn-mobile" class="w-full text-left text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Sign Out</button>`;
         document.getElementById('sign-out-btn-desktop').addEventListener('click', () => signOut(auth));
         document.getElementById('sign-out-btn-mobile').addEventListener('click', () => signOut(auth));
         fetchUserCredits(user);
     } else {
-        nav.innerHTML = `
-            <a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a>
-            <button id="sign-in-btn-desktop" class="text-sm font-medium text-white px-4 py-1.5 rounded-full transition-colors" style="background-color: #517CBE;">Sign In</button>
-        `;
-         mobileNav.innerHTML = `
-            <a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a>
-            <div class="p-4 mt-4">
-                 <button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button>
-            </div>
-        `;
+        nav.innerHTML = `<a href="pricing.html" class="text-sm font-medium text-gray-700 hover:bg-[#517CBE]/10 rounded-full px-3 py-1 transition-colors">Pricing</a><button id="sign-in-btn-desktop" class="text-sm font-medium text-white px-4 py-1.5 rounded-full transition-colors" style="background-color: #517CBE;">Sign In</button>`;
+        mobileNav.innerHTML = `<a href="pricing.html" class="block text-lg font-semibold text-gray-700 p-3 rounded-lg hover:bg-gray-100">Pricing</a><div class="p-4 mt-4"><button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button></div>`;
         document.getElementById('sign-in-btn-desktop').addEventListener('click', signInWithGoogle);
         document.getElementById('sign-in-btn-mobile').addEventListener('click', signInWithGoogle);
     }
@@ -250,13 +213,9 @@ function updateCreditsDisplay(amount) {
 
 function autoResizeTextarea(e) {
     const textarea = e.target;
-    const promptBarContainer = DOMElements.promptBarContainer;
-    if (!textarea || !promptBarContainer) return;
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
-    const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
-    const numLines = Math.round(textarea.scrollHeight / lineHeight);
-    promptBarContainer.classList.toggle('expanded', numLines > 1);
+    DOMElements.promptBarContainer.classList.toggle('expanded', textarea.scrollHeight > 50);
 }
 
 function toggleModal(modal, show) {
@@ -274,24 +233,20 @@ function closeAllModals() {
     document.querySelectorAll('[role="dialog"]').forEach(modal => toggleModal(modal, false));
 }
 
-// --- Authentication ---
-async function signInWithGoogle(event) {
-    // This is the core function for signing in. It's called by the header buttons AND the modal button.
+async function signInWithGoogle() {
     try {
         await signInWithPopup(auth, provider);
-        closeAllModals(); // On success, close the sign-in modal.
+        closeAllModals();
     } catch (error) {
-        console.error("An error occurred during Google Sign-In:", error);
-        // You could show an error message to the user here.
+        console.error("Google Sign-In Error:", error);
     }
 }
 
 // --- Image Generation ---
 async function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
     if (isGenerating) return;
-
     if (!currentUser) {
-        toggleModal(DOMElements.authModal, true); // If user is not signed in, show the modal.
+        toggleModal(DOMElements.authModal, true);
         return;
     }
     if (currentUserCredits <= 0) {
@@ -300,13 +255,16 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
     }
 
     const imageDataSource = fromRegenerate ? currentPreviewInputData : uploadedImageData;
-    const prompt = fromRegenerate ? promptOverride : DOMElements.promptInput.value.trim();
+    const userPrompt = (fromRegenerate ? promptOverride : DOMElements.promptInput.value)?.trim();
 
-    if (!prompt && !imageDataSource) {
+    if (!userPrompt && !imageDataSource) {
         DOMElements.promptBarContainer.classList.add('animate-shake');
         setTimeout(() => DOMElements.promptBarContainer.classList.remove('animate-shake'), 500);
         return;
     }
+    
+    // NEW: Combine user prompt with the selected style
+    const finalPrompt = currentStyle ? `${userPrompt}, ${currentStyle} style` : userPrompt;
 
     setLoadingState(true);
     startTimer();
@@ -316,26 +274,28 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
 
     try {
         const token = await currentUser.getIdToken();
+        const deductResponse = await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        if (!deductResponse.ok) throw new Error('Credit deduction failed.');
         
-        // This part is a placeholder for your backend logic.
-        // It first deducts a credit, then calls the image generation API.
-        await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        const creditData = await deductResponse.json();
+        currentUserCredits = creditData.newCredits;
+        updateCreditsDisplay(currentUserCredits);
+
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ prompt, imageData: generationInputData, aspectRatio: aspectRatioToSend })
+            body: JSON.stringify({ prompt: finalPrompt, imageData: generationInputData, aspectRatio: aspectRatioToSend })
         });
-
-        if (!response.ok) throw new Error(`API generation failed: ${await response.text()}`);
+        if (!response.ok) throw new Error(`API error: ${await response.text()}`);
         
         const result = await response.json();
         const base64Data = generationInputData
             ? result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data 
             : result.predictions?.[0]?.bytesBase64Encoded;
-            
         if (!base64Data) throw new Error("No image data in API response");
         
-        showPreviewModal(`data:image/png;base64,${base64Data}`, prompt, generationInputData);
+        // IMPORTANT: Show the original user prompt in the modal, not the modified one
+        showPreviewModal(`data:image/png;base64,${base64Data}`, userPrompt, generationInputData);
 
     } catch (error) {
         console.error("Generation Error:", error);
@@ -352,8 +312,8 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
 async function handleRegeneration() {
     const newPrompt = DOMElements.previewPromptInput.value;
     if (!newPrompt && !currentPreviewInputData) return;
-    
     toggleModal(DOMElements.previewModal, false);
+    // handleImageGenerationRequest will automatically add the currently selected style
     await handleImageGenerationRequest(newPrompt, true);
 }
 
@@ -362,15 +322,12 @@ function setLoadingState(isLoading) {
     DOMElements.generateBtn.disabled = isLoading;
     DOMElements.buttonContent.classList.toggle('hidden', isLoading);
     DOMElements.buttonTimer.classList.toggle('hidden', !isLoading);
-    if(!isLoading) {
-        clearInterval(timerInterval);
-    }
+    if (!isLoading) clearInterval(timerInterval);
 }
 
 function startTimer() {
     let endTime = Date.now() + 17000;
     DOMElements.buttonTimer.textContent = '17.00';
-    
     timerInterval = setInterval(() => {
         const remaining = endTime - Date.now();
         if (remaining <= 0) {
@@ -410,14 +367,11 @@ function removeUploadedImage() {
 // --- Preview Modal ---
 function showPreviewModal(imageUrl, prompt, inputImageData) {
     DOMElements.previewImage.src = imageUrl;
-    DOMElements.previewPromptInput.value = prompt;
+    DOMElements.previewPromptInput.value = prompt; // Show original user prompt
     currentPreviewInputData = inputImageData;
-
+    DOMElements.previewInputImageContainer.classList.toggle('hidden', !inputImageData);
     if (inputImageData) {
         DOMElements.previewInputImage.src = `data:${inputImageData.mimeType};base64,${inputImageData.data}`;
-        DOMElements.previewInputImageContainer.classList.remove('hidden');
-    } else {
-        DOMElements.previewInputImageContainer.classList.add('hidden');
     }
     toggleModal(DOMElements.previewModal, true);
 }
