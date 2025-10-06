@@ -60,7 +60,7 @@ export default async function handler(req, res) {
                 return res.status(200).json({ credits: userDoc.data().credits, isNewUser: false });
             } else {
                 // New regular user
-                const initialCredits = 50; // Default free credits
+                const initialCredits = 10; // Default free credits for new users
                 await userRef.set({
                     email: user.email,
                     credits: initialCredits,
@@ -95,3 +95,4 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'A server error has occurred.' });
     }
 }
+
