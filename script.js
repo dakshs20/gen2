@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ids = [
         'header-nav', 'gallery-container', 'masonry-gallery', 'prompt-input',
         'generate-btn', 'generate-icon', 'loading-spinner', 'ratio-btn', 'ratio-options',
-        'auth-modal', 'google-signin-btn', 'out-of-credits-modal', 
+        'auth-modal', 'google-signin-btn', 'out-of-credits-modal', 'new-user-credits-modal',
         'preview-modal', 'preview-image', 'preview-prompt-input',
         'download-btn', 'close-preview-btn', 'regenerate-btn',
         'image-upload-btn', 'image-upload-input', 'image-preview-container', 'image-preview', 'remove-image-btn',
@@ -210,6 +210,15 @@ async function fetchUserCredits(user) {
         const data = await response.json();
         currentUserCredits = data.credits;
         updateCreditsDisplay(currentUserCredits);
+
+        // --- NEW: Check if the user is new and show a welcome modal ---
+        if (data.isNewUser) {
+            // Show the welcome modal after a short delay
+            setTimeout(() => {
+                toggleModal(DOMElements.newUserCreditsModal, true);
+            }, 1000); // 1 second delay
+        }
+        
     } catch (error) {
         console.error("Error fetching credits:", error);
         updateCreditsDisplay('Error');
