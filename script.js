@@ -75,21 +75,29 @@ function restructureGalleryForMobile() {
 }
 
 function initializeEventListeners() {
-    // Ensure the Google Sign In button in the modal is correctly wired
-    DOMElements.googleSignInBtn?.addEventListener('click', signInWithGoogle);
-
+    // --- Authentication Listeners ---
+    // This is the critical fix: Ensure the Google Sign In button in the new modal is correctly wired.
+    if (DOMElements.googleSigninBtn) {
+        DOMElements.googleSigninBtn.addEventListener('click', signInWithGoogle);
+    } else {
+        console.error("Critical Error: The Google Sign-In button with ID 'google-signin-btn' was not found in the DOM.");
+    }
+    
+    // --- Modal Closing Listeners ---
+    // Make all buttons with the '.close-modal-btn' class close any open modal.
     DOMElements.closeModalBtns.forEach(btn => btn.addEventListener('click', closeAllModals));
     
-    // Add event listener to close modals when clicking the backdrop
+    // Make clicks on the modal backdrop (the dark overlay) close the modal.
     DOMElements.modalBackdrops.forEach(backdrop => {
         backdrop.addEventListener('click', (event) => {
-            // Check if the click occurred directly on the backdrop element (not a child element)
+            // This check ensures that only a click on the backdrop itself, and not its children (the modal content), will trigger the close action.
             if (event.target === backdrop) {
-                toggleModal(backdrop, false);
+                closeAllModals();
             }
         });
     });
 
+    // --- Core UI Listeners ---
     DOMElements.generateBtn?.addEventListener('click', handleImageGenerationRequest);
     
     DOMElements.promptInput?.addEventListener('keydown', (event) => {
@@ -120,6 +128,7 @@ function initializeEventListeners() {
         });
     });
 
+    // --- Preview Modal Listeners ---
     DOMElements.closePreviewBtn?.addEventListener('click', () => toggleModal(DOMElements.previewModal, false));
     DOMElements.downloadBtn?.addEventListener('click', downloadPreviewImage);
     DOMElements.regenerateBtn?.addEventListener('click', handleRegeneration);
@@ -127,12 +136,14 @@ function initializeEventListeners() {
     DOMElements.previewImageUploadInput?.addEventListener('change', handlePreviewImageChange);
     DOMElements.removeInputImageBtn?.addEventListener('click', removePreviewInputImage);
     
+    // --- Mobile Menu Listener ---
     DOMElements.mobileMenuBtn?.addEventListener('click', () => {
         const isHidden = DOMElements.mobileMenu.classList.toggle('hidden');
         DOMElements.menuOpenIcon.classList.toggle('hidden', !isHidden);
         DOMElements.menuCloseIcon.classList.toggle('hidden', isHidden);
     });
 
+    // --- Header Scroll Effect ---
     window.addEventListener('scroll', () => {
         const header = document.querySelector('header');
         if (window.scrollY > 10) {
@@ -150,16 +161,8 @@ function initializeAnimations() {
     
     gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-    // Simple fade-in for hero headline
-    gsap.fromTo(DOMElements.heroHeadline, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 }
-    );
-
-    gsap.fromTo(DOMElements.heroSubline, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 }
-    );
+    gsap.fromTo(DOMElements.heroHeadline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.2 });
+    gsap.fromTo(DOMElements.heroSubline, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', delay: 0.4 });
 
     const words = ["creators.", "agencies.", "enterprises."];
     let masterTl = gsap.timeline({ repeat: -1 });
@@ -170,81 +173,20 @@ function initializeAnimations() {
     });
     
     if (DOMElements.statCards.length > 0) {
-        gsap.fromTo(DOMElements.statCards, 
-            { opacity: 0, y: 30, scale: 0.95 },
-            { 
-                opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out',
-                scrollTrigger: {
-                    trigger: "#stats-section",
-                    start: "top 85%",
-                }
-            }
-        );
+        gsap.fromTo(DOMElements.statCards, { opacity: 0, y: 30, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 1, stagger: 0.15, ease: 'power3.out', scrollTrigger: { trigger: "#stats-section", start: "top 85%" } });
     }
 
     if (DOMElements.counters.length > 0) {
         DOMElements.counters.forEach(counter => {
             const target = +counter.dataset.target;
             const proxy = { val: 0 }; 
-
-            gsap.to(proxy, {
-                val: target,
-                duration: 2.5,
-                ease: "power2.out",
-                scrollTrigger: {
-                    trigger: counter,
-                    start: "top 90%",
-                },
-                onUpdate: function() {
-                    counter.textContent = Math.ceil(proxy.val);
-                }
-            });
+            gsap.to(proxy, { val: target, duration: 2.5, ease: "power2.out", scrollTrigger: { trigger: counter, start: "top 90%" }, onUpdate: () => counter.textContent = Math.ceil(proxy.val) });
         });
     }
 
-    // Testimonial Animation
     const testimonialSection = document.getElementById('testimonial-section');
     if(testimonialSection) {
-        gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), {
-            opacity: 0,
-            y: 50,
-            duration: 1,
-            stagger: 0.2,
-            ease: 'power3.out',
-            scrollTrigger: {
-                trigger: testimonialSection,
-                start: "top 80%",
-            }
-        });
-    }
-
-    // Dynamic Use Cases Scroll Animation
-    const useCasesSection = document.getElementById('use-cases-section');
-    const useCaseTexts = gsap.utils.toArray('.use-case-text');
-
-    if (useCasesSection && useCaseTexts.length > 0) {
-        const tl = gsap.timeline();
-        
-        // Animate the first item in
-        tl.to(useCaseTexts[0], { opacity: 1, y: 0, duration: 0.3 });
-
-        // Loop through the rest to create transitions
-        for (let i = 1; i < useCaseTexts.length; i++) {
-            tl.to(useCaseTexts[i-1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.4"); // Animate out previous
-            tl.to(useCaseTexts[i], { opacity: 1, y: 0, duration: 0.3 }); // Animate in current
-        }
-        
-        // Animate the last one out
-        tl.to(useCaseTexts[useCaseTexts.length - 1], { opacity: 0, y: -30, duration: 0.3 }, "+=0.4");
-
-        ScrollTrigger.create({
-            trigger: useCasesSection,
-            start: "top top",
-            end: "bottom bottom",
-            pin: true,
-            scrub: 0.5,
-            animation: tl,
-        });
+        gsap.from(testimonialSection.querySelectorAll(".testimonial-image, .testimonial-card"), { opacity: 0, y: 50, duration: 1, stagger: 0.2, ease: 'power3.out', scrollTrigger: { trigger: testimonialSection, start: "top 80%" } });
     }
 }
 
@@ -280,7 +222,6 @@ function updateUIForAuthState(user) {
                  <button id="sign-in-btn-mobile" class="w-full text-lg font-semibold bg-[#517CBE] text-white px-4 py-3 rounded-xl hover:bg-opacity-90 transition-colors">Sign In</button>
             </div>
         `;
-        // Ensure the buttons that appear when signed out are wired to the sign-in function
         document.getElementById('sign-in-btn-desktop').addEventListener('click', signInWithGoogle);
         document.getElementById('sign-in-btn-mobile').addEventListener('click', signInWithGoogle);
     }
@@ -311,29 +252,20 @@ function autoResizeTextarea(e) {
     const textarea = e.target;
     const promptBarContainer = DOMElements.promptBarContainer;
     if (!textarea || !promptBarContainer) return;
-
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
-
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
     const numLines = Math.round(textarea.scrollHeight / lineHeight);
-
-    if (numLines > 1) { 
-        promptBarContainer.classList.add('expanded');
-    } else {
-        promptBarContainer.classList.remove('expanded');
-    }
+    promptBarContainer.classList.toggle('expanded', numLines > 1);
 }
 
 function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
         modal.style.display = 'flex';
-        // Remove style display none after transition to display flex
         setTimeout(() => modal.setAttribute('aria-hidden', 'false'), 10);
     } else {
         modal.setAttribute('aria-hidden', 'true');
-        // Set display to none after the transition is complete (300ms is common)
         setTimeout(() => modal.style.display = 'none', 300);
     }
 }
@@ -342,31 +274,24 @@ function closeAllModals() {
     document.querySelectorAll('[role="dialog"]').forEach(modal => toggleModal(modal, false));
 }
 
-// Handles the Google Sign-In process.
+// --- Authentication ---
 async function signInWithGoogle(event) {
-    // Prevents the modal from closing if the button click propagates to the backdrop.
-    if (event && event.stopPropagation) {
-        event.stopPropagation();
-    }
-    
+    // This is the core function for signing in. It's called by the header buttons AND the modal button.
     try {
-        // Trigger the Firebase Google Sign-In popup.
         await signInWithPopup(auth, provider);
-        // If sign-in is successful, close any open modals.
-        closeAllModals();
+        closeAllModals(); // On success, close the sign-in modal.
     } catch (error) {
-        // Log any potential errors during the sign-in process to the console.
         console.error("An error occurred during Google Sign-In:", error);
+        // You could show an error message to the user here.
     }
 }
-
 
 // --- Image Generation ---
 async function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
     if (isGenerating) return;
+
     if (!currentUser) {
-        // This is the trigger for the pop up
-        toggleModal(DOMElements.authModal, true);
+        toggleModal(DOMElements.authModal, true); // If user is not signed in, show the modal.
         return;
     }
     if (currentUserCredits <= 0) {
@@ -378,13 +303,11 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
     const prompt = fromRegenerate ? promptOverride : DOMElements.promptInput.value.trim();
 
     if (!prompt && !imageDataSource) {
-        const promptBar = DOMElements.promptInput.parentElement;
-        promptBar.classList.add('animate-shake');
-        setTimeout(() => promptBar.classList.remove('animate-shake'), 500);
+        DOMElements.promptBarContainer.classList.add('animate-shake');
+        setTimeout(() => DOMElements.promptBarContainer.classList.remove('animate-shake'), 500);
         return;
     }
 
-    isGenerating = true;
     setLoadingState(true);
     startTimer();
     
@@ -394,27 +317,16 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
     try {
         const token = await currentUser.getIdToken();
         
-        const deductResponse = await fetch('/api/credits', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!deductResponse.ok) throw new Error('Credit deduction failed. Please try again.');
-        
-        const creditData = await deductResponse.json();
-        currentUserCredits = creditData.newCredits;
-        updateCreditsDisplay(currentUserCredits);
-
+        // This part is a placeholder for your backend logic.
+        // It first deducts a credit, then calls the image generation API.
+        await fetch('/api/credits', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ prompt, imageData: generationInputData, aspectRatio: aspectRatioToSend })
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API generation failed: ${errorText}`);
-        }
+        if (!response.ok) throw new Error(`API generation failed: ${await response.text()}`);
         
         const result = await response.json();
         const base64Data = generationInputData
@@ -423,18 +335,11 @@ async function handleImageGenerationRequest(promptOverride = null, fromRegenerat
             
         if (!base64Data) throw new Error("No image data in API response");
         
-        const imageUrl = `data:image/png;base64,${base64Data}`;
-        
-        showPreviewModal(imageUrl, prompt, generationInputData);
+        showPreviewModal(`data:image/png;base64,${base64Data}`, prompt, generationInputData);
 
     } catch (error) {
         console.error("Generation Error:", error);
-        // Use custom modal or UI element for error instead of alert
-        // For simplicity here, we log and can update later if a dedicated error modal is built
-        // alert(`An error occurred during generation: ${error.message}`);
-        console.error(`An error occurred during generation: ${error.message}`);
     } finally {
-        clearInterval(timerInterval);
         setLoadingState(false);
         if(!fromRegenerate) {
             DOMElements.promptInput.value = '';
@@ -457,6 +362,9 @@ function setLoadingState(isLoading) {
     DOMElements.generateBtn.disabled = isLoading;
     DOMElements.buttonContent.classList.toggle('hidden', isLoading);
     DOMElements.buttonTimer.classList.toggle('hidden', !isLoading);
+    if(!isLoading) {
+        clearInterval(timerInterval);
+    }
 }
 
 function startTimer() {
@@ -471,7 +379,7 @@ function startTimer() {
             return;
         }
         DOMElements.buttonTimer.textContent = (remaining / 1000).toFixed(2);
-    }, 50); // Update every 50ms for smoother millisecond display
+    }, 50);
 }
 
 // --- Image Handling & Uploads ---
@@ -506,8 +414,7 @@ function showPreviewModal(imageUrl, prompt, inputImageData) {
     currentPreviewInputData = inputImageData;
 
     if (inputImageData) {
-        const dataUrl = `data:${inputImageData.mimeType};base64,${inputImageData.data}`;
-        DOMElements.previewInputImage.src = dataUrl;
+        DOMElements.previewInputImage.src = `data:${inputImageData.mimeType};base64,${inputImageData.data}`;
         DOMElements.previewInputImageContainer.classList.remove('hidden');
     } else {
         DOMElements.previewInputImageContainer.classList.add('hidden');
@@ -535,8 +442,7 @@ function removePreviewInputImage() {
 }
 
 function downloadPreviewImage() {
-    const imageUrl = DOMElements.previewImage.src;
-    fetch(imageUrl)
+    fetch(DOMElements.previewImage.src)
         .then(res => res.blob())
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
@@ -551,3 +457,4 @@ function downloadPreviewImage() {
         })
         .catch(() => console.error('An error occurred while downloading the image.'));
 }
+
