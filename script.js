@@ -342,22 +342,24 @@ function closeAllModals() {
     document.querySelectorAll('[role="dialog"]').forEach(modal => toggleModal(modal, false));
 }
 
-// *** CRITICAL FIX: Ensure the event is stopped at the button level ***
-function signInWithGoogle(event) {
-    // Stop the event from propagating up to the modal's backdrop handler
-    // This is the simplest way to guarantee the button action executes first.
+// Handles the Google Sign-In process.
+async function signInWithGoogle(event) {
+    // Prevents the modal from closing if the button click propagates to the backdrop.
     if (event && event.stopPropagation) {
         event.stopPropagation();
     }
     
-    // This is the core function that handles the sign-in popup
-    signInWithPopup(auth, provider)
-        .then(() => {
-            // Once signed in, close the modal immediately
-            closeAllModals();
-        })
-        .catch(console.error);
+    try {
+        // Trigger the Firebase Google Sign-In popup.
+        await signInWithPopup(auth, provider);
+        // If sign-in is successful, close any open modals.
+        closeAllModals();
+    } catch (error) {
+        // Log any potential errors during the sign-in process to the console.
+        console.error("An error occurred during Google Sign-In:", error);
+    }
 }
+
 
 // --- Image Generation ---
 async function handleImageGenerationRequest(promptOverride = null, fromRegenerate = false) {
